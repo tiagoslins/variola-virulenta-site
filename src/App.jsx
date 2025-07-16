@@ -6,7 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 // --- INÍCIO: CONFIGURAÇÃO DO SUPABASE ---
 // Chaves API e URL do seu projeto Supabase
 const supabaseUrl = 'https://roifevvmjncbzvugneni.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvaWZldnZtam5jYnp2dWduZW5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2ODU2MzUsImV4cCI6MjA2ODI2MTYzNX0.jti8SFCc4KVoFBWKlzzqzqwJILsAhJtQ1Xi48_S-TuA';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvaWZldnZtam5jYnp2dWduZW5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjExNzQ0MDAsImV4cCI6MjAzNjc1MDQwMH0.sfl2Trp9G9-O2K_2n4W24eS02D4I0w5p7yGR52e2g2E';
 // --- FIM DA CONFIGURAÇÃO ---
 
 // Inicialização do cliente Supabase
@@ -112,7 +112,7 @@ const PersistentAudioPlayer = ({ track, isPlaying, onPlayPause, onEnded }) => {
 
 const HomePage = ({ setPage, articles }) => {
     if (!articles || articles.length === 0) {
-        return <div className="text-center py-10 text-white">Carregando artigos...</div>;
+        return <div className="text-center py-10 text-white">Nenhum artigo publicado ainda.</div>;
     }
     const featuredArticle = articles[0];
     const secondaryArticles = articles.slice(1, 3);
