@@ -201,7 +201,7 @@ const SingleArticlePage = ({ article, setPage }) => {
     );
 };
 
-const EpisodesPage = ({ onPlay }) => {
+const EpisodesPage = () => {
     const [episodes, setEpisodes] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -336,13 +336,7 @@ const SearchPage = ({ query, setPage, articles }) => {
     );
 };
 
-const TeamPage = ({ setPage }) => {
-    const teamMembers = [
-        { id: '1', name: 'Sofia Mendes', role: 'Economista e Host', photo: 'https://placehold.co/400x400/1a1a1a/39FF14?text=SM', bio: 'Mestre em Economia Política, Sofia descomplica temas complexos e expõe as engrenagens do poder.' },
-        { id: '2', name: 'Lucas Andrade', role: 'Historiador e Co-Host', photo: 'https://placehold.co/400x400/1a1a1a/39FF14?text=LA', bio: 'Especialista em história social do Brasil, Lucas conecta o passado às lutas do presente.' },
-        { id: '3', name: 'Julia Lima', role: 'Produção e Mídias Sociais', photo: 'https://placehold.co/400x400/1a1a1a/39FF14?text=JL', bio: 'Jornalista e ativista, Julia é a voz do podcast nas redes, engajando a comunidade.' },
-    ];
-    return (
+const TeamPage = ({ setPage, teamMembers }) => (
     <div className="bg-black py-12">
         <div className="container mx-auto px-6">
             <h1 className="text-4xl font-extrabold text-white mb-10 border-b-2 border-gray-800 pb-4">Quem Somos</h1>
@@ -360,7 +354,7 @@ const TeamPage = ({ setPage }) => {
             </div>
         </div>
     </div>
-)};
+);
 
 const BioPage = ({ member, setPage }) => (
     <div className="bg-black py-12 min-h-[70vh]">
@@ -426,7 +420,7 @@ const LoginPage = ({ setPage, setUserProfile }) => {
     );
 };
 
-const DashboardPage = ({ user, setPage, setUserProfile, articles, fetchArticles, glossaryTerms, fetchGlossary }) => {
+const DashboardPage = ({ user, setPage, setUserProfile, articles, fetchArticles, glossaryTerms, fetchGlossary, teamMembers, fetchTeamMembers }) => {
     const [currentView, setCurrentView] = useState('articles');
     
     return (
@@ -440,6 +434,7 @@ const DashboardPage = ({ user, setPage, setUserProfile, articles, fetchArticles,
                     <button onClick={() => setCurrentView('articles')} className={`py-2 px-4 font-bold ${currentView === 'articles' ? 'border-b-2 border-green-500 text-white' : 'text-gray-500'}`}>Gerenciar Artigos</button>
                     {(user.role === 'super_admin' || user.role === 'admin') && (
                         <>
+                            <button onClick={() => setCurrentView('team')} className={`py-2 px-4 font-bold ${currentView === 'team' ? 'border-b-2 border-green-500 text-white' : 'text-gray-500'}`}>Gerenciar Equipe</button>
                             <button onClick={() => setCurrentView('glossary')} className={`py-2 px-4 font-bold ${currentView === 'glossary' ? 'border-b-2 border-green-500 text-white' : 'text-gray-500'}`}>Gerenciar Glossário</button>
                             <button onClick={() => setCurrentView('users')} className={`py-2 px-4 font-bold ${currentView === 'users' ? 'border-b-2 border-green-500 text-white' : 'text-gray-500'}`}>Gerenciar Usuários</button>
                         </>
@@ -447,6 +442,7 @@ const DashboardPage = ({ user, setPage, setUserProfile, articles, fetchArticles,
                 </div>
                 
                 {currentView === 'articles' && <ArticleManager user={user} articles={articles} fetchArticles={fetchArticles} />}
+                {currentView === 'team' && <TeamManager teamMembers={teamMembers} fetchTeamMembers={fetchTeamMembers} />}
                 {currentView === 'glossary' && <GlossaryManager glossaryTerms={glossaryTerms} fetchGlossary={fetchGlossary} />}
                 {currentView === 'users' && <UserManager user={user} />}
             </div>
@@ -647,6 +643,103 @@ const GlossaryManager = ({ glossaryTerms, fetchGlossary }) => {
     );
 };
 
+const TeamManager = ({ teamMembers, fetchTeamMembers }) => {
+    const [editingMember, setEditingMember] = useState(null);
+    const [formState, setFormState] = useState({ name: '', role: '', photo: '', bio: '', display_order: 99 });
+    const [message, setMessage] = useState('');
+
+    useEffect(() => {
+        if (editingMember) {
+            setFormState(editingMember);
+        } else {
+            setFormState({ name: '', role: '', photo: '', bio: '', display_order: 99 });
+        }
+    }, [editingMember]);
+
+    const handleFormChange = (e) => {
+        const { name, value } = e.target;
+        setFormState(prevState => ({ ...prevState, [name]: value }));
+    };
+
+    const handleFormSubmit = async (e) => {
+        e.preventDefault();
+        if (!formState.name || !formState.role) {
+            setMessage('Nome e função são obrigatórios.');
+            return;
+        }
+
+        if (editingMember) {
+            const { error } = await supabase.from('team_members').update(formState).eq('id', editingMember.id);
+            if (error) setMessage(`Erro: ${error.message}`); else setMessage('Membro atualizado!');
+        } else {
+            const { error } = await supabase.from('team_members').insert(formState);
+            if (error) setMessage(`Erro: ${error.message}`); else setMessage('Membro adicionado!');
+        }
+
+        await fetchTeamMembers();
+        setEditingMember(null);
+        setTimeout(() => setMessage(''), 3000);
+    };
+
+    const handleDelete = async (memberId) => {
+        if (window.confirm('Tem certeza?')) {
+            await supabase.from('team_members').delete().eq('id', memberId);
+            await fetchTeamMembers();
+        }
+    };
+
+    return (
+        <>
+            <div className="bg-gray-900 p-8 rounded-lg border border-gray-800 mb-12">
+                <h2 className="text-2xl font-bold mb-6">{editingMember ? 'Editando Membro da Equipe' : 'Adicionar Novo Membro'}</h2>
+                <form onSubmit={handleFormSubmit}>
+                    <div className="grid md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label className="block text-gray-300 mb-2">Nome</label>
+                            <input name="name" value={formState.name} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white rounded-md" />
+                        </div>
+                        <div>
+                            <label className="block text-gray-300 mb-2">Função</label>
+                            <input name="role" value={formState.role} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white rounded-md" />
+                        </div>
+                        <div>
+                            <label className="block text-gray-300 mb-2">URL da Foto</label>
+                            <input name="photo" value={formState.photo} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white rounded-md" />
+                        </div>
+                         <div>
+                            <label className="block text-gray-300 mb-2">Ordem de Exibição</label>
+                            <input type="number" name="display_order" value={formState.display_order} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white rounded-md" />
+                        </div>
+                    </div>
+                    <div className="mb-6">
+                        <label className="block text-gray-300 mb-2">Biografia</label>
+                        <textarea name="bio" value={formState.bio} onChange={handleFormChange} rows="5" className="w-full p-3 border border-gray-700 bg-gray-800 text-white rounded-md"></textarea>
+                    </div>
+                    {message && <p className="text-green-500 text-center my-4">{message}</p>}
+                    <div className="flex items-center gap-4">
+                        <button type="submit" className="bg-green-500 text-black font-bold py-2 px-6 rounded-md">{editingMember ? 'Atualizar' : 'Adicionar'}</button>
+                        {editingMember && <button type="button" onClick={() => setEditingMember(null)} className="bg-gray-600 text-white font-bold py-2 px-6 rounded-md">Cancelar</button>}
+                    </div>
+                </form>
+            </div>
+            <div className="bg-gray-900 p-8 rounded-lg border border-gray-800">
+                <h2 className="text-2xl font-bold mb-6">Membros da Equipe</h2>
+                <div className="space-y-4">
+                    {teamMembers.map(member => (
+                        <div key={member.id} className="flex justify-between items-center bg-black p-4 rounded-md border border-gray-700">
+                            <p className="text-white font-bold">{member.name}</p>
+                            <div className="flex gap-2">
+                                <button onClick={() => setEditingMember(member)} className="bg-blue-600 text-white text-xs font-bold py-1 px-3 rounded-md">Editar</button>
+                                <button onClick={() => handleDelete(member.id)} className="bg-red-600 text-white text-xs font-bold py-1 px-3 rounded-md">Excluir</button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </>
+    );
+};
+
 const UserManager = ({ user }) => {
     const [message, setMessage] = useState('');
     const [email, setEmail] = useState('');
@@ -699,6 +792,7 @@ export default function App() {
     const [userProfile, setUserProfile] = useState(null);
     const [articles, setArticles] = useState([]);
     const [glossaryTerms, setGlossaryTerms] = useState([]);
+    const [teamMembers, setTeamMembers] = useState([]);
     const [currentTrack, setCurrentTrack] = useState(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -713,6 +807,11 @@ export default function App() {
         if (error) console.error('Erro ao buscar glossário:', error); else setGlossaryTerms(data);
     };
 
+    const fetchTeamMembers = async () => {
+        const { data, error } = await supabase.from('team_members').select('*').order('display_order', { ascending: true });
+        if (error) console.error('Erro ao buscar membros da equipe:', error); else setTeamMembers(data);
+    };
+
     useEffect(() => {
         const loadInitialData = async () => {
             setIsLoading(true);
@@ -721,8 +820,7 @@ export default function App() {
                 const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
                 setUserProfile({ ...session.user, role: profile?.role || 'writer' });
             }
-            await fetchArticles();
-            await fetchGlossary();
+            await Promise.all([fetchArticles(), fetchGlossary(), fetchTeamMembers()]);
             setIsLoading(false);
         };
 
@@ -774,12 +872,12 @@ export default function App() {
             case 'singleArticle': return <SingleArticlePage article={page.data} setPage={setPage} />;
             case 'episodes': return <EpisodesPage onPlay={handlePlay} />;
             case 'glossary': return <GlossaryPage glossaryTerms={glossaryTerms} />;
-            case 'team': return <TeamPage setPage={setPage} />;
+            case 'team': return <TeamPage setPage={setPage} teamMembers={teamMembers} />;
             case 'bio': return <BioPage member={page.data} setPage={setPage} />;
             case 'tagPage': return <TagPage tag={page.data} {...props} />;
             case 'search': return <SearchPage query={page.data} {...props} />;
             case 'login': return <LoginPage setPage={setPage} setUserProfile={setUserProfile} />;
-            case 'dashboard': return userProfile ? <DashboardPage user={userProfile} setUserProfile={setUserProfile} fetchArticles={fetchArticles} fetchGlossary={fetchGlossary} glossaryTerms={glossaryTerms} {...props} /> : <LoginPage setPage={setPage} setUserProfile={setUserProfile} />;
+            case 'dashboard': return userProfile ? <DashboardPage user={userProfile} setUserProfile={setUserProfile} fetchArticles={fetchArticles} fetchGlossary={fetchGlossary} fetchTeamMembers={fetchTeamMembers} glossaryTerms={glossaryTerms} teamMembers={teamMembers} {...props} /> : <LoginPage setPage={setPage} setUserProfile={setUserProfile} />;
             default: return <HomePage {...props} />;
         }
     };
