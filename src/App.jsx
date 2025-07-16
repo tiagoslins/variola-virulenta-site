@@ -6,18 +6,24 @@ import { createClient } from '@supabase/supabase-js';
 // --- INÍCIO: CONFIGURAÇÃO DO SUPABASE ---
 // Chaves API e URL do seu projeto Supabase
 const supabaseUrl = 'https://roifevvmjncbzvugneni.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvaWZldnZtam5jYnp2dWduZW5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2ODU2MzUsImV4cCI6MjA2ODI2MTYzNX0.jti8SFCc4KVoFBWKlzzqzqwJILsAhJtQ1Xi48_S-TuA;
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvaWZldnZtam5jYnp2dWduZW5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjExNzQ0MDAsImV4cCI6MjAzNjc1MDQwMH0.sfl2Trp9G9-O2K_2n4W24eS02D4I0w5p7yGR52e2g2E';
 // --- FIM DA CONFIGURAÇÃO ---
 
 // Inicialização do cliente Supabase
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 
-// --- DADOS SIMULADOS (APENAS PARA EPISÓDIOS) ---
+// --- DADOS SIMULADOS (APENAS PARA EPISÓDIOS E GLOSSÁRIO) ---
 const ALL_EPISODES = [
     { id: 'ep1', title: 'EP 01: A Farsa da Austeridade Fiscal', description: 'Neste episódio de estreia, discutimos por que a austeridade fiscal não é uma solução econômica, mas um projeto político que aprofunda desigualdades.', audioSrc: 'https://placehold.co/audio/39FF14/000000.mp3', showNotes: '<ul><li><strong>Livro:</strong> "O Estado Empreendedor" de Mariana Mazzucato</li><li><strong>Artigo:</strong> "Austeridade: A História de uma Ideia Perigosa" de Mark Blyth</li><li><strong>Documentário:</strong> "Inside Job" (Trabalho Interno)</li></ul>' },
     { id: 'ep2', title: 'EP 02: Reforma Agrária: Uma Dívida Histórica', description: 'Conversamos sobre a concentração de terras no Brasil e a importância da reforma agrária para a justiça social e a soberania alimentar.', audioSrc: 'https://placehold.co/audio/39FF14/000000.mp3', showNotes: '<ul><li><strong>Livro:</strong> "Quarto de Despejo" de Carolina Maria de Jesus</li><li><strong>Filme:</strong> "Abril Despedaçado" de Walter Salles</li><li><strong>Fonte:</strong> Dados do INCRA sobre concentração de terras.</li></ul>' },
 ];
+
+const GLOSSARY_TERMS = [
+    { term: 'Neoliberalismo', definition: 'Doutrina econômica que defende a mínima intervenção do Estado na economia, a livre circulação de capitais, as privatizações e a desregulamentação de mercados. Critica-se seu papel no aumento da desigualdade social.' },
+    { term: 'Mais-Valia', definition: 'Conceito central na teoria de Karl Marx, refere-se à diferença entre o valor que um trabalhador produz e o salário que ele recebe. Essa diferença é apropriada pelo capitalista, sendo a base da exploração no sistema capitalista.' },
+];
+
 
 // --- COMPONENTES ---
 
