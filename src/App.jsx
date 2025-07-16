@@ -4,11 +4,20 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
 // --- INÍCIO: CONFIGURAÇÃO DO SUPABASE ---
+// Chaves API e URL do seu projeto Supabase
 const supabaseUrl = 'https://roifevvmjncbzvugneni.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvaWZldnZtam5jYnp2dWduZW5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjExNzQ0MDAsImV4cCI6MjAzNjc1MDQwMH0.sfl2Trp9G9-O2K_2n4W24eS02D4I0w5p7yGR52e2g2E';
 // --- FIM DA CONFIGURAÇÃO ---
 
+// Inicialização do cliente Supabase
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+
+// --- DADOS SIMULADOS (APENAS PARA EPISÓDIOS) ---
+const ALL_EPISODES = [
+    { id: 'ep1', title: 'EP 01: A Farsa da Austeridade Fiscal', description: 'Neste episódio de estreia, discutimos por que a austeridade fiscal não é uma solução econômica, mas um projeto político que aprofunda desigualdades.', audioSrc: 'https://placehold.co/audio/39FF14/000000.mp3', showNotes: '<ul><li><strong>Livro:</strong> "O Estado Empreendedor" de Mariana Mazzucato</li><li><strong>Artigo:</strong> "Austeridade: A História de uma Ideia Perigosa" de Mark Blyth</li><li><strong>Documentário:</strong> "Inside Job" (Trabalho Interno)</li></ul>' },
+    { id: 'ep2', title: 'EP 02: Reforma Agrária: Uma Dívida Histórica', description: 'Conversamos sobre a concentração de terras no Brasil e a importância da reforma agrária para a justiça social e a soberania alimentar.', audioSrc: 'https://placehold.co/audio/39FF14/000000.mp3', showNotes: '<ul><li><strong>Livro:</strong> "Quarto de Despejo" de Carolina Maria de Jesus</li><li><strong>Filme:</strong> "Abril Despedaçado" de Walter Salles</li><li><strong>Fonte:</strong> Dados do INCRA sobre concentração de terras.</li></ul>' },
+];
 
 // --- COMPONENTES ---
 
@@ -50,7 +59,7 @@ const Header = ({ setPage, onSearch, user }) => {
 };
 
 const Footer = () => (
-    <footer className="bg-black text-gray-500 pb-12 pt-8">
+    <footer className="bg-black text-gray-500 pb-24 pt-8">
         <div className="container mx-auto px-6 text-center text-sm">
             <p>&copy; {new Date().getFullYear()} Variola Virulenta. Conteúdo crítico para tempos urgentes.</p>
         </div>
@@ -64,6 +73,39 @@ const SupportBanner = () => (
         </a>
     </div>
 );
+
+const PersistentAudioPlayer = ({ track, isPlaying, onPlayPause, onEnded }) => {
+    const audioRef = useRef(null);
+
+    useEffect(() => {
+        if (audioRef.current) {
+            if (isPlaying) {
+                audioRef.current.play().catch(e => console.error("Erro ao tocar áudio:", e));
+            } else {
+                audioRef.current.pause();
+            }
+        }
+    }, [isPlaying, track]);
+    
+    if (!track) return null;
+
+    return (
+        <div className="fixed bottom-10 left-0 w-full bg-black border-t-2 border-green-500 z-50 p-2 shadow-lg">
+            <div className="container mx-auto flex items-center justify-between text-white">
+                <div className="flex items-center">
+                    <button onClick={onPlayPause} className="text-green-500 text-4xl mr-4">
+                        {isPlaying ? '❚❚' : '►'}
+                    </button>
+                    <div>
+                        <p className="font-bold">{track.title}</p>
+                        <p className="text-sm text-gray-400">Variola Virulenta</p>
+                    </div>
+                </div>
+                <audio ref={audioRef} src={track.audioSrc} onEnded={onEnded} className="hidden"></audio>
+            </div>
+        </div>
+    );
+};
 
 
 // --- PÁGINAS ---
@@ -159,7 +201,7 @@ const SingleArticlePage = ({ article, setPage }) => {
     );
 };
 
-const EpisodesPage = () => {
+const EpisodesPage = ({ onPlay }) => {
     const [episodes, setEpisodes] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -200,7 +242,6 @@ const EpisodesPage = () => {
             <div className="container mx-auto px-6">
                 <h1 className="text-4xl font-extrabold text-white mb-10 border-b-2 border-gray-800 pb-4">Episódios</h1>
                 
-                {/* Featured Episode */}
                 {featuredEpisode && (
                     <div className="mb-12 bg-gray-900 p-8 rounded-lg border border-gray-800">
                         <h2 className="text-green-500 font-bold uppercase mb-4">Último Lançamento</h2>
@@ -224,7 +265,6 @@ const EpisodesPage = () => {
                     </div>
                 )}
 
-                {/* Episode List */}
                 <h2 className="text-2xl font-extrabold text-white mb-6 border-b-2 border-gray-800 pb-2">Anteriores</h2>
                 <div className="space-y-4 max-w-4xl mx-auto">
                     {episodeList.map(ep => (
@@ -264,7 +304,6 @@ const GlossaryPage = ({ glossaryTerms }) => (
     </div>
 );
 
-// ... (Outras páginas como TagPage, SearchPage, TeamPage, BioPage, LoginPage, DashboardPage, etc. permanecem iguais)
 const TagPage = ({ tag, setPage, articles }) => {
     const filteredArticles = articles.filter(article => article.tags.includes(tag));
     return (
@@ -732,7 +771,6 @@ export default function App() {
             case 'articles': return <ArticlesSection title="Todos os Artigos" {...props} />;
             case 'singleArticle': return <SingleArticlePage article={page.data} setPage={setPage} />;
             case 'episodes': return <EpisodesPage onPlay={handlePlay} />;
-            case 'episodeDetail': return <EpisodeDetailPage episode={page.data} setPage={setPage} onPlay={handlePlay} />;
             case 'glossary': return <GlossaryPage glossaryTerms={glossaryTerms} />;
             case 'team': return <TeamPage setPage={setPage} />;
             case 'bio': return <BioPage member={page.data} setPage={setPage} />;
