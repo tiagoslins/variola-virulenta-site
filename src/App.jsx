@@ -13,17 +13,11 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 
-// --- DADOS SIMULADOS (APENAS PARA EPISÓDIOS E GLOSSÁRIO) ---
+// --- DADOS SIMULADOS (APENAS PARA EPISÓDIOS) ---
 const ALL_EPISODES = [
     { id: 'ep1', title: 'EP 01: A Farsa da Austeridade Fiscal', description: 'Neste episódio de estreia, discutimos por que a austeridade fiscal não é uma solução econômica, mas um projeto político que aprofunda desigualdades.', audioSrc: 'https://placehold.co/audio/39FF14/000000.mp3', showNotes: '<ul><li><strong>Livro:</strong> "O Estado Empreendedor" de Mariana Mazzucato</li><li><strong>Artigo:</strong> "Austeridade: A História de uma Ideia Perigosa" de Mark Blyth</li><li><strong>Documentário:</strong> "Inside Job" (Trabalho Interno)</li></ul>' },
     { id: 'ep2', title: 'EP 02: Reforma Agrária: Uma Dívida Histórica', description: 'Conversamos sobre a concentração de terras no Brasil e a importância da reforma agrária para a justiça social e a soberania alimentar.', audioSrc: 'https://placehold.co/audio/39FF14/000000.mp3', showNotes: '<ul><li><strong>Livro:</strong> "Quarto de Despejo" de Carolina Maria de Jesus</li><li><strong>Filme:</strong> "Abril Despedaçado" de Walter Salles</li><li><strong>Fonte:</strong> Dados do INCRA sobre concentração de terras.</li></ul>' },
 ];
-
-const GLOSSARY_TERMS = [
-    { term: 'Neoliberalismo', definition: 'Doutrina econômica que defende a mínima intervenção do Estado na economia, a livre circulação de capitais, as privatizações e a desregulamentação de mercados. Critica-se seu papel no aumento da desigualdade social.' },
-    { term: 'Mais-Valia', definition: 'Conceito central na teoria de Karl Marx, refere-se à diferença entre o valor que um trabalhador produz e o salário que ele recebe. Essa diferença é apropriada pelo capitalista, sendo a base da exploração no sistema capitalista.' },
-];
-
 
 // --- COMPONENTES ---
 
@@ -207,44 +201,79 @@ const SingleArticlePage = ({ article, setPage }) => {
     );
 };
 
-const EpisodesPage = ({ setPage, onPlay }) => (
-    <div className="bg-black py-12">
-        <div className="container mx-auto px-6">
-            <h1 className="text-4xl font-extrabold text-white mb-10 border-b-2 border-gray-800 pb-4">Episódios</h1>
-            <div className="space-y-8 max-w-4xl mx-auto">
-                {ALL_EPISODES.map(ep => (
-                    <div key={ep.id} className="bg-gray-900 p-6 rounded-lg border border-gray-800 flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                        <button onClick={() => onPlay(ep)} className="text-green-500 text-6xl flex-shrink-0 hover:text-green-400">►</button>
-                        <div className="flex-grow">
-                            <h3 className="text-2xl font-bold text-white">{ep.title}</h3>
-                            <p className="text-gray-400 mt-2 font-serif">{ep.description}</p>
-                            <button onClick={() => setPage({ name: 'episodeDetail', data: ep })} className="font-bold text-green-500 hover:underline mt-4">
-                                Ver Detalhes e Fontes &rarr;
-                            </button>
+const EpisodesPage = ({ onPlay }) => {
+    const [episodes, setEpisodes] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchEpisodes = async () => {
+            try {
+                const response = await fetch('/.netlify/functions/spotify');
+                if (!response.ok) {
+                    throw new Error('Falha ao buscar dados do Spotify.');
+                }
+                const data = await response.json();
+                setEpisodes(data);
+            } catch (err) {
+                setError(err.message);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchEpisodes();
+    }, []);
+
+    if (isLoading) {
+        return <div className="text-center py-20 text-white">A carregar episódios do Spotify...</div>;
+    }
+
+    if (error) {
+        return <div className="text-center py-20 text-red-500">Erro: {error}</div>;
+    }
+
+    const featuredEpisode = episodes[0];
+    const episodeList = episodes.slice(1);
+
+    return (
+        <div className="bg-black py-12">
+            <div className="container mx-auto px-6">
+                <h1 className="text-4xl font-extrabold text-white mb-10 border-b-2 border-gray-800 pb-4">Episódios</h1>
+                
+                {/* Featured Episode */}
+                {featuredEpisode && (
+                    <div className="mb-12 bg-gray-900 p-8 rounded-lg border border-gray-800">
+                        <h2 className="text-green-500 font-bold uppercase mb-4">Último Lançamento</h2>
+                        <div className="flex flex-col md:flex-row gap-8">
+                            <img src={featuredEpisode.images[0]?.url} alt={featuredEpisode.name} className="w-full md:w-1/3 h-auto object-cover rounded-md" />
+                            <div className="flex-grow">
+                                <h3 className="text-3xl font-bold text-white mb-2">{featuredEpisode.name}</h3>
+                                <p className="text-gray-400 font-serif mb-4">{featuredEpisode.description}</p>
+                                <button onClick={() => onPlay({ title: featuredEpisode.name, audioSrc: featuredEpisode.audio_preview_url })} className="bg-green-500 text-black font-bold py-3 px-6 rounded-md hover:bg-green-400">
+                                    Ouvir Agora
+                                </button>
+                            </div>
                         </div>
                     </div>
-                ))}
-            </div>
-        </div>
-    </div>
-);
+                )}
 
-const EpisodeDetailPage = ({ episode, setPage, onPlay }) => (
-    <div className="bg-black py-12">
-        <div className="container mx-auto px-6 max-w-4xl">
-            <button onClick={() => setPage({ name: 'episodes' })} className="text-green-500 font-bold hover:underline mb-8">&larr; Voltar</button>
-            <div className="bg-gray-900 p-8 rounded-lg border border-gray-800">
-                <h1 className="text-4xl font-extrabold text-white mb-2">{episode.title}</h1>
-                <p className="text-gray-300 mb-6 font-serif text-lg">{episode.description}</p>
-                <button onClick={() => onPlay(episode)} className="bg-green-500 text-black font-bold py-3 px-8 rounded-md hover:bg-green-600 mb-8 w-full text-lg">
-                    Ouvir Episódio
-                </button>
-                <h2 className="text-2xl font-bold text-white border-t border-gray-700 pt-6 mt-6">Fontes e Recomendações (Show Notes)</h2>
-                <div className="prose prose-invert mt-4 font-serif" dangerouslySetInnerHTML={{ __html: episode.showNotes }} />
+                {/* Episode List */}
+                <div className="space-y-4 max-w-4xl mx-auto">
+                    {episodeList.map(ep => (
+                        <div key={ep.id} className="bg-gray-900 p-4 rounded-lg border border-gray-800 flex items-center gap-4">
+                            <button onClick={() => onPlay({ title: ep.name, audioSrc: ep.audio_preview_url })} className="text-green-500 text-4xl flex-shrink-0 hover:text-green-400">►</button>
+                            <div>
+                                <h4 className="text-lg font-bold text-white">{ep.name}</h4>
+                                <p className="text-sm text-gray-500">{new Date(ep.release_date).toLocaleDateString('pt-BR')}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
         </div>
-    </div>
-);
+    );
+};
 
 const GlossaryPage = ({ glossaryTerms }) => (
     <div className="bg-black py-12">
