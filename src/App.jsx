@@ -10,13 +10,6 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// --- DADOS SIMULADOS (APENAS PARA GLOSSÁRIO) ---
-const GLOSSARY_TERMS = [
-    { term: 'Neoliberalismo', definition: 'Doutrina econômica que defende a mínima intervenção do Estado na economia, a livre circulação de capitais, as privatizações e a desregulamentação de mercados. Critica-se seu papel no aumento da desigualdade social.' },
-    { term: 'Mais-Valia', definition: 'Conceito central na teoria de Karl Marx, refere-se à diferença entre o valor que um trabalhador produz e o salário que ele recebe. Essa diferença é apropriada pelo capitalista, sendo a base da exploração no sistema capitalista.' },
-];
-
-
 // --- COMPONENTES ---
 
 const Header = ({ setPage, onSearch, user }) => {
@@ -57,7 +50,7 @@ const Header = ({ setPage, onSearch, user }) => {
 };
 
 const Footer = () => (
-    <footer className="bg-black text-gray-500 pb-24 pt-8">
+    <footer className="bg-black text-gray-500 pb-12 pt-8">
         <div className="container mx-auto px-6 text-center text-sm">
             <p>&copy; {new Date().getFullYear()} Variola Virulenta. Conteúdo crítico para tempos urgentes.</p>
         </div>
@@ -72,39 +65,6 @@ const SupportBanner = () => (
     </div>
 );
 
-const PersistentAudioPlayer = ({ track, isPlaying, onPlayPause, onEnded }) => {
-    const audioRef = useRef(null);
-
-    useEffect(() => {
-        if (audioRef.current) {
-            if (isPlaying) {
-                audioRef.current.play().catch(e => console.error("Erro ao tocar áudio:", e));
-            } else {
-                audioRef.current.pause();
-            }
-        }
-    }, [isPlaying, track]);
-    
-    if (!track) return null;
-
-    return (
-        <div className="fixed bottom-10 left-0 w-full bg-black border-t-2 border-green-500 z-50 p-2 shadow-lg">
-            <div className="container mx-auto flex items-center justify-between text-white">
-                <div className="flex items-center">
-                    <button onClick={onPlayPause} className="text-green-500 text-4xl mr-4">
-                        {isPlaying ? '❚❚' : '►'}
-                    </button>
-                    <div>
-                        <p className="font-bold">{track.title}</p>
-                        <p className="text-sm text-gray-400">Variola Virulenta</p>
-                    </div>
-                </div>
-                <audio ref={audioRef} src={track.audioSrc} onEnded={onEnded} className="hidden"></audio>
-            </div>
-        </div>
-    );
-};
-
 
 // --- PÁGINAS ---
 
@@ -118,6 +78,7 @@ const HomePage = ({ setPage, articles }) => {
     return (
         <div className="container mx-auto px-6 py-8">
             <div className="grid lg:grid-cols-3 gap-8">
+                {/* Featured Article */}
                 {featuredArticle && (
                     <div className="lg:col-span-2">
                         <div className="cursor-pointer group" onClick={() => setPage({ name: 'singleArticle', data: featuredArticle })}>
@@ -129,6 +90,7 @@ const HomePage = ({ setPage, articles }) => {
                         </div>
                     </div>
                 )}
+                {/* Secondary Articles */}
                 <div className="space-y-8">
                     {secondaryArticles.map(article => (
                          <div key={article.id} className="cursor-pointer group" onClick={() => setPage({ name: 'singleArticle', data: article })}>
@@ -197,7 +159,7 @@ const SingleArticlePage = ({ article, setPage }) => {
     );
 };
 
-const EpisodesPage = ({ onPlay }) => {
+const EpisodesPage = () => {
     const [episodes, setEpisodes] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -205,18 +167,11 @@ const EpisodesPage = ({ onPlay }) => {
     useEffect(() => {
         const fetchEpisodes = async () => {
             try {
-                // A função é chamada a partir do endpoint relativo do Netlify
                 const response = await fetch('/.netlify/functions/spotify');
                 const data = await response.json();
 
-                // Se a resposta da função for um erro, trate-o aqui
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-                
-                if (!response.ok) {
-                    throw new Error('A resposta da rede não foi OK.');
-                }
+                if (data.error) throw new Error(data.error);
+                if (!response.ok) throw new Error('A resposta da rede não foi OK.');
                 
                 setEpisodes(data);
             } catch (err) {
@@ -245,6 +200,7 @@ const EpisodesPage = ({ onPlay }) => {
             <div className="container mx-auto px-6">
                 <h1 className="text-4xl font-extrabold text-white mb-10 border-b-2 border-gray-800 pb-4">Episódios</h1>
                 
+                {/* Featured Episode */}
                 {featuredEpisode && (
                     <div className="mb-12 bg-gray-900 p-8 rounded-lg border border-gray-800">
                         <h2 className="text-green-500 font-bold uppercase mb-4">Último Lançamento</h2>
@@ -253,23 +209,38 @@ const EpisodesPage = ({ onPlay }) => {
                             <div className="flex-grow">
                                 <h3 className="text-3xl font-bold text-white mb-2">{featuredEpisode.name}</h3>
                                 <p className="text-gray-400 font-serif mb-4">{featuredEpisode.description}</p>
-                                <button onClick={() => onPlay({ title: featuredEpisode.name, audioSrc: featuredEpisode.audio_preview_url })} className="bg-green-500 text-black font-bold py-3 px-6 rounded-md hover:bg-green-400">
-                                    Ouvir Prévia
-                                </button>
+                                <iframe
+                                    style={{ borderRadius: '12px' }}
+                                    src={`https://open.spotify.com/embed/episode/${featuredEpisode.id}?utm_source=generator&theme=0`}
+                                    width="100%"
+                                    height="152"
+                                    frameBorder="0"
+                                    allowFullScreen=""
+                                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                                    loading="lazy"
+                                ></iframe>
                             </div>
                         </div>
                     </div>
                 )}
 
+                {/* Episode List */}
+                <h2 className="text-2xl font-extrabold text-white mb-6 border-b-2 border-gray-800 pb-2">Anteriores</h2>
                 <div className="space-y-4 max-w-4xl mx-auto">
                     {episodeList.map(ep => (
-                        <div key={ep.id} className="bg-gray-900 p-4 rounded-lg border border-gray-800 flex items-center gap-4">
-                            <button onClick={() => onPlay({ title: ep.name, audioSrc: ep.audio_preview_url })} className="text-green-500 text-4xl flex-shrink-0 hover:text-green-400">►</button>
+                        <a 
+                            key={ep.id} 
+                            href={ep.external_urls.spotify} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="bg-gray-900 p-4 rounded-lg border border-gray-800 flex items-center gap-4 hover:border-green-500 transition-colors"
+                        >
+                            <img src={ep.images[2]?.url || ep.images[0]?.url} alt={ep.name} className="w-16 h-16 rounded-md flex-shrink-0" />
                             <div>
-                                <h4 className="text-lg font-bold text-white">{ep.name}</h4>
+                                <h4 className="font-bold text-white">{ep.name}</h4>
                                 <p className="text-sm text-gray-500">{new Date(ep.release_date).toLocaleDateString('pt-BR')}</p>
                             </div>
-                        </div>
+                        </a>
                     ))}
                 </div>
             </div>
@@ -760,7 +731,7 @@ export default function App() {
             case 'home': return <HomePage {...props} />;
             case 'articles': return <ArticlesSection title="Todos os Artigos" {...props} />;
             case 'singleArticle': return <SingleArticlePage article={page.data} setPage={setPage} />;
-            case 'episodes': return <EpisodesPage setPage={setPage} onPlay={handlePlay} />;
+            case 'episodes': return <EpisodesPage onPlay={handlePlay} />;
             case 'episodeDetail': return <EpisodeDetailPage episode={page.data} setPage={setPage} onPlay={handlePlay} />;
             case 'glossary': return <GlossaryPage glossaryTerms={glossaryTerms} />;
             case 'team': return <TeamPage setPage={setPage} />;
