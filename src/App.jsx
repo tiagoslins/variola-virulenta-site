@@ -4,20 +4,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
 // --- INÍCIO: CONFIGURAÇÃO DO SUPABASE ---
-// Chaves API e URL do seu projeto Supabase
 const supabaseUrl = 'https://roifevvmjncbzvugneni.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvaWZldnZtam5jYnp2dWduZW5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjExNzQ0MDAsImV4cCI6MjAzNjc1MDQwMH0.sfl2Trp9G9-O2K_2n4W24eS02D4I0w5p7yGR52e2g2E';
 // --- FIM DA CONFIGURAÇÃO ---
 
-// Inicialização do cliente Supabase
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-
-// --- DADOS SIMULADOS (APENAS PARA EPISÓDIOS) ---
-const ALL_EPISODES = [
-    { id: 'ep1', title: 'EP 01: A Farsa da Austeridade Fiscal', description: 'Neste episódio de estreia, discutimos por que a austeridade fiscal não é uma solução econômica, mas um projeto político que aprofunda desigualdades.', audioSrc: 'https://placehold.co/audio/39FF14/000000.mp3', showNotes: '<ul><li><strong>Livro:</strong> "O Estado Empreendedor" de Mariana Mazzucato</li><li><strong>Artigo:</strong> "Austeridade: A História de uma Ideia Perigosa" de Mark Blyth</li><li><strong>Documentário:</strong> "Inside Job" (Trabalho Interno)</li></ul>' },
-    { id: 'ep2', title: 'EP 02: Reforma Agrária: Uma Dívida Histórica', description: 'Conversamos sobre a concentração de terras no Brasil e a importância da reforma agrária para a justiça social e a soberania alimentar.', audioSrc: 'https://placehold.co/audio/39FF14/000000.mp3', showNotes: '<ul><li><strong>Livro:</strong> "Quarto de Despejo" de Carolina Maria de Jesus</li><li><strong>Filme:</strong> "Abril Despedaçado" de Walter Salles</li><li><strong>Fonte:</strong> Dados do INCRA sobre concentração de terras.</li></ul>' },
+// --- DADOS SIMULADOS (APENAS PARA GLOSSÁRIO) ---
+const GLOSSARY_TERMS = [
+    { term: 'Neoliberalismo', definition: 'Doutrina econômica que defende a mínima intervenção do Estado na economia, a livre circulação de capitais, as privatizações e a desregulamentação de mercados. Critica-se seu papel no aumento da desigualdade social.' },
+    { term: 'Mais-Valia', definition: 'Conceito central na teoria de Karl Marx, refere-se à diferença entre o valor que um trabalhador produz e o salário que ele recebe. Essa diferença é apropriada pelo capitalista, sendo a base da exploração no sistema capitalista.' },
 ];
+
 
 // --- COMPONENTES ---
 
@@ -120,7 +118,6 @@ const HomePage = ({ setPage, articles }) => {
     return (
         <div className="container mx-auto px-6 py-8">
             <div className="grid lg:grid-cols-3 gap-8">
-                {/* Featured Article */}
                 {featuredArticle && (
                     <div className="lg:col-span-2">
                         <div className="cursor-pointer group" onClick={() => setPage({ name: 'singleArticle', data: featuredArticle })}>
@@ -132,7 +129,6 @@ const HomePage = ({ setPage, articles }) => {
                         </div>
                     </div>
                 )}
-                {/* Secondary Articles */}
                 <div className="space-y-8">
                     {secondaryArticles.map(article => (
                          <div key={article.id} className="cursor-pointer group" onClick={() => setPage({ name: 'singleArticle', data: article })}>
@@ -209,14 +205,22 @@ const EpisodesPage = ({ onPlay }) => {
     useEffect(() => {
         const fetchEpisodes = async () => {
             try {
+                // A função é chamada a partir do endpoint relativo do Netlify
                 const response = await fetch('/.netlify/functions/spotify');
-                if (!response.ok) {
-                    throw new Error('Falha ao buscar dados do Spotify.');
-                }
                 const data = await response.json();
+
+                // Se a resposta da função for um erro, trate-o aqui
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                if (!response.ok) {
+                    throw new Error('A resposta da rede não foi OK.');
+                }
+                
                 setEpisodes(data);
             } catch (err) {
-                setError(err.message);
+                setError(`Não foi possível carregar os episódios. Verifique se o ID do Podcast está correto no ficheiro da função e se as variáveis de ambiente no Netlify estão configuradas. Detalhes: ${err.message}`);
             } finally {
                 setIsLoading(false);
             }
@@ -230,7 +234,7 @@ const EpisodesPage = ({ onPlay }) => {
     }
 
     if (error) {
-        return <div className="text-center py-20 text-red-500">Erro: {error}</div>;
+        return <div className="container mx-auto px-6 py-20 text-center text-red-400 bg-red-900/50 rounded-lg">{error}</div>;
     }
 
     const featuredEpisode = episodes[0];
@@ -241,7 +245,6 @@ const EpisodesPage = ({ onPlay }) => {
             <div className="container mx-auto px-6">
                 <h1 className="text-4xl font-extrabold text-white mb-10 border-b-2 border-gray-800 pb-4">Episódios</h1>
                 
-                {/* Featured Episode */}
                 {featuredEpisode && (
                     <div className="mb-12 bg-gray-900 p-8 rounded-lg border border-gray-800">
                         <h2 className="text-green-500 font-bold uppercase mb-4">Último Lançamento</h2>
@@ -251,14 +254,13 @@ const EpisodesPage = ({ onPlay }) => {
                                 <h3 className="text-3xl font-bold text-white mb-2">{featuredEpisode.name}</h3>
                                 <p className="text-gray-400 font-serif mb-4">{featuredEpisode.description}</p>
                                 <button onClick={() => onPlay({ title: featuredEpisode.name, audioSrc: featuredEpisode.audio_preview_url })} className="bg-green-500 text-black font-bold py-3 px-6 rounded-md hover:bg-green-400">
-                                    Ouvir Agora
+                                    Ouvir Prévia
                                 </button>
                             </div>
                         </div>
                     </div>
                 )}
 
-                {/* Episode List */}
                 <div className="space-y-4 max-w-4xl mx-auto">
                     {episodeList.map(ep => (
                         <div key={ep.id} className="bg-gray-900 p-4 rounded-lg border border-gray-800 flex items-center gap-4">
@@ -291,6 +293,7 @@ const GlossaryPage = ({ glossaryTerms }) => (
     </div>
 );
 
+// ... (Outras páginas como TagPage, SearchPage, TeamPage, BioPage, LoginPage, DashboardPage, etc. permanecem iguais)
 const TagPage = ({ tag, setPage, articles }) => {
     const filteredArticles = articles.filter(article => article.tags.includes(tag));
     return (
