@@ -247,19 +247,21 @@ const EpisodesPage = ({ onPlay }) => {
                         <h2 className="text-green-500 font-bold uppercase mb-4">Último Lançamento</h2>
                         <div className="flex flex-col md:flex-row gap-8">
                             <img src={featuredEpisode.images[0]?.url} alt={featuredEpisode.name} className="w-full md:w-1/3 h-auto object-cover rounded-md" />
-                            <div className="flex-grow">
+                            <div className="flex flex-col flex-grow">
                                 <h3 className="text-3xl font-bold text-white mb-2">{featuredEpisode.name}</h3>
-                                <p className="text-gray-400 font-serif mb-4">{featuredEpisode.description}</p>
-                                <iframe
-                                    style={{ borderRadius: '12px' }}
-                                    src={`https://open.spotify.com/embed/episode/${featuredEpisode.id}?utm_source=generator&theme=0`}
-                                    width="100%"
-                                    height="152"
-                                    frameBorder="0"
-                                    allowFullScreen=""
-                                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                                    loading="lazy"
-                                ></iframe>
+                                <p className="text-gray-400 font-serif mb-4 flex-grow">{featuredEpisode.description}</p>
+                                <div className="mt-auto pt-4">
+                                    <iframe
+                                        style={{ borderRadius: '12px' }}
+                                        src={`https://open.spotify.com/embed/episode/${featuredEpisode.id}?utm_source=generator&theme=0`}
+                                        width="100%"
+                                        height="152"
+                                        frameBorder="0"
+                                        allowFullScreen=""
+                                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                                        loading="lazy"
+                                    ></iframe>
+                                </div>
                             </div>
                         </div>
                     </div>
