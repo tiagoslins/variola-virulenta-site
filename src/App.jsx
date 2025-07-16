@@ -390,9 +390,15 @@ const LoginPage = ({ setPage, setUserProfile }) => {
                 .eq('id', user.id)
                 .single();
             
-            if (profileError) throw profileError;
-
-            setUserProfile({ ...user, role: profile.role });
+            if (profileError) {
+                // Se o perfil não for encontrado, pode ser um erro de sincronização
+                // Vamos atribuir um papel padrão e continuar, mas registar o erro
+                console.error("Erro ao buscar perfil, mas o login foi bem-sucedido:", profileError);
+                setUserProfile({ ...user, role: 'writer' }); // Assume 'writer' como padrão
+            } else {
+                setUserProfile({ ...user, role: profile.role });
+            }
+            
             setPage({ name: 'dashboard' });
         } catch (err) {
             setError(err.message);
