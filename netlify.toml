@@ -1,0 +1,16 @@
+# Configurações de build para o Netlify
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+# Configuração para o ambiente de desenvolvimento local (netlify dev)
+[dev]
+  command = "npm run dev"
+  port = 8888
+  publish = "dist"
+  
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
