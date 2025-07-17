@@ -12,13 +12,6 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 // Inicialização do cliente Supabase
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-
-// --- DADOS SIMULADOS (APENAS PARA EPISÓDIOS) ---
-const ALL_EPISODES = [
-    { id: 'ep1', title: 'EP 01: A Farsa da Austeridade Fiscal', description: 'Neste episódio de estreia, discutimos por que a austeridade fiscal não é uma solução econômica, mas um projeto político que aprofunda desigualdades.', audioSrc: 'https://placehold.co/audio/39FF14/000000.mp3', showNotes: '<ul><li><strong>Livro:</strong> "O Estado Empreendedor" de Mariana Mazzucato</li><li><strong>Artigo:</strong> "Austeridade: A História de uma Ideia Perigosa" de Mark Blyth</li><li><strong>Documentário:</strong> "Inside Job" (Trabalho Interno)</li></ul>' },
-    { id: 'ep2', title: 'EP 02: Reforma Agrária: Uma Dívida Histórica', description: 'Conversamos sobre a concentração de terras no Brasil e a importância da reforma agrária para a justiça social e a soberania alimentar.', audioSrc: 'https://placehold.co/audio/39FF14/000000.mp3', showNotes: '<ul><li><strong>Livro:</strong> "Quarto de Despejo" de Carolina Maria de Jesus</li><li><strong>Filme:</strong> "Abril Despedaçado" de Walter Salles</li><li><strong>Fonte:</strong> Dados do INCRA sobre concentração de terras.</li></ul>' },
-];
-
 // --- COMPONENTES ---
 
 const Header = ({ setPage, onSearch, user }) => {
@@ -127,41 +120,56 @@ const HomePage = ({ setPage }) => {
     if (isLoading) {
         return <div className="text-center py-10 text-white">Carregando...</div>;
     }
-    if (!articles || articles.length === 0) {
-        return <div className="text-center py-10 text-white">Nenhum artigo publicado ainda.</div>;
-    }
     
     const featuredArticle = articles[0];
     const secondaryArticles = articles.slice(1, 3);
     const moreArticles = articles.slice(3);
 
     return (
-        <div className="container mx-auto px-6 py-8">
-            <div className="grid lg:grid-cols-3 gap-8">
-                {featuredArticle && (
-                    <div className="lg:col-span-2">
-                        <div className="cursor-pointer group" onClick={() => setPage({ name: 'singleArticle', data: featuredArticle })}>
-                            {featuredArticle.coverImage && <img src={featuredArticle.coverImage} alt="" className="w-full h-auto object-cover mb-4"/>}
-                            <p className="text-green-500 font-bold text-sm uppercase">{featuredArticle.tags?.[0]}</p>
-                            <h1 className="text-3xl md:text-5xl font-extrabold text-white my-2 group-hover:text-green-400 transition-colors">{featuredArticle.title}</h1>
-                            <p className="text-gray-400 font-serif text-lg">{featuredArticle.content.substring(0, 150)}...</p>
-                            <p className="text-gray-500 text-sm mt-2">Por {featuredArticle.author_name || 'Autor Desconhecido'}</p>
+        <>
+            <section className="bg-black text-white text-center py-12">
+                <div className="container mx-auto px-6">
+                    <img 
+                        src="https://placehold.co/1200x400/000000/39FF14?text=Variola+Virulenta" 
+                        alt="Banner do Variola Virulenta" 
+                        className="w-full h-auto object-cover mb-8"
+                    />
+                    <h1 className="text-5xl font-extrabold mb-4 text-green-400 tracking-tight">Pensamento Crítico para Transformar a Realidade</h1>
+                    <p className="text-xl text-gray-300 max-w-3xl mx-auto">Debates sobre política, economia e história para além do senso comum.</p>
+                </div>
+            </section>
+            
+            {(!articles || articles.length === 0) ? (
+                <div className="text-center py-10 text-white">Nenhum artigo publicado ainda.</div>
+            ) : (
+                <div className="container mx-auto px-6 py-8">
+                    <div className="grid lg:grid-cols-3 gap-8">
+                        {featuredArticle && (
+                            <div className="lg:col-span-2">
+                                <div className="cursor-pointer group" onClick={() => setPage({ name: 'singleArticle', data: featuredArticle })}>
+                                    {featuredArticle.coverImage && <img src={featuredArticle.coverImage} alt="" className="w-full h-auto object-cover mb-4"/>}
+                                    <p className="text-green-500 font-bold text-sm uppercase">{featuredArticle.tags?.[0]}</p>
+                                    <h1 className="text-3xl md:text-5xl font-extrabold text-white my-2 group-hover:text-green-400 transition-colors">{featuredArticle.title}</h1>
+                                    <p className="text-gray-400 font-serif text-lg">{featuredArticle.content.substring(0, 150)}...</p>
+                                    <p className="text-gray-500 text-sm mt-2">Por {featuredArticle.author_name || 'Autor Desconhecido'}</p>
+                                </div>
+                            </div>
+                        )}
+                        <div className="space-y-8">
+                            {secondaryArticles.map(article => (
+                                 <div key={article.id} className="cursor-pointer group" onClick={() => setPage({ name: 'singleArticle', data: article })}>
+                                     {article.coverImage && <img src={article.coverImage} alt="" className="w-full h-40 object-cover mb-2"/>}
+                                     <p className="text-green-500 font-bold text-sm uppercase">{article.tags?.[0]}</p>
+                                     <h2 className="text-xl font-bold text-white group-hover:text-green-400 transition-colors">{article.title}</h2>
+                                     <p className="text-gray-500 text-sm mt-1">Por {article.author_name || 'Autor Desconhecido'}</p>
+                                 </div>
+                            ))}
                         </div>
                     </div>
-                )}
-                <div className="space-y-8">
-                    {secondaryArticles.map(article => (
-                         <div key={article.id} className="cursor-pointer group" onClick={() => setPage({ name: 'singleArticle', data: article })}>
-                             {article.coverImage && <img src={article.coverImage} alt="" className="w-full h-40 object-cover mb-2"/>}
-                             <p className="text-green-500 font-bold text-sm uppercase">{article.tags?.[0]}</p>
-                             <h2 className="text-xl font-bold text-white group-hover:text-green-400 transition-colors">{article.title}</h2>
-                             <p className="text-gray-500 text-sm mt-1">Por {article.author_name || 'Autor Desconhecido'}</p>
-                         </div>
-                    ))}
+                    <ArticlesSection setPage={setPage} title="Mais Artigos" articles={moreArticles} />
                 </div>
-            </div>
-            <ArticlesSection setPage={setPage} title="Mais Artigos" articles={moreArticles} />
-        </div>
+            )}
+        </>
     );
 };
 
@@ -290,9 +298,8 @@ const EpisodesPage = () => {
                         <div className="flex flex-col md:flex-row gap-8">
                             <img src={featuredEpisode.images[0]?.url} alt={featuredEpisode.name} className="w-full md:w-1/3 h-auto object-cover rounded-md" />
                             <div className="flex flex-col flex-grow">
-                                <h3 className="text-3xl font-bold text-white mb-2">{featuredEpisode.name}</h3>
-                                <p className="text-gray-400 font-serif mb-4 flex-grow">{featuredEpisode.description}</p>
-                                <div className="mt-auto pt-4">
+                                <h3 className="text-3xl font-bold text-white mb-4">{featuredEpisode.name}</h3>
+                                <div className="mt-auto">
                                     <iframe
                                         style={{ borderRadius: '12px' }}
                                         src={`https://open.spotify.com/embed/episode/${featuredEpisode.id}?utm_source=generator&theme=0`}
@@ -494,7 +501,6 @@ const LoginPage = ({ setPage }) => {
         try {
             const { error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) throw error;
-            // O listener onAuthStateChange no App.jsx irá tratar de atualizar o estado e redirecionar
             setPage({ name: 'dashboard' });
         } catch (err) {
             setError(err.message);
@@ -527,7 +533,7 @@ const LoginPage = ({ setPage }) => {
 };
 
 // ... (Restante do código, incluindo DashboardPage e seus subcomponentes, permanece o mesmo)
-const DashboardPage = ({ user, setPage, articles, fetchArticles, glossaryTerms, fetchGlossary, teamMembers, fetchTeamMembers }) => {
+const DashboardPage = ({ user, setPage }) => {
     const [currentView, setCurrentView] = useState('articles');
     
     const handleLogout = async () => {
@@ -552,20 +558,30 @@ const DashboardPage = ({ user, setPage, articles, fetchArticles, glossaryTerms, 
                     )}
                 </div>
                 
-                {currentView === 'articles' && <ArticleManager user={user} articles={articles} fetchArticles={fetchArticles} />}
-                {currentView === 'team' && <TeamManager teamMembers={teamMembers} fetchTeamMembers={fetchTeamMembers} />}
-                {currentView === 'glossary' && <GlossaryManager glossaryTerms={glossaryTerms} fetchGlossary={fetchGlossary} />}
+                {currentView === 'articles' && <ArticleManager user={user} />}
+                {currentView === 'team' && <TeamManager />}
+                {currentView === 'glossary' && <GlossaryManager />}
                 {currentView === 'users' && <UserManager user={user} />}
             </div>
         </div>
     );
 };
 
-const ArticleManager = ({ user, articles, fetchArticles }) => {
+const ArticleManager = ({ user }) => {
+    const [articles, setArticles] = useState([]);
     const [editingArticle, setEditingArticle] = useState(null);
     const [formState, setFormState] = useState({ title: '', content: '', tags: '', coverImage: '', author_name: '' });
     const [message, setMessage] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const fetchArticles = async () => {
+        const { data, error } = await supabase.from('articles').select('*').order('createdAt', { ascending: false });
+        if (error) console.error('Erro ao buscar artigos:', error); else setArticles(data);
+    };
+
+    useEffect(() => {
+        fetchArticles();
+    }, []);
 
     useEffect(() => {
         if (editingArticle) {
@@ -686,10 +702,20 @@ const ArticleManager = ({ user, articles, fetchArticles }) => {
     );
 };
 
-const GlossaryManager = ({ glossaryTerms, fetchGlossary }) => {
+const GlossaryManager = () => {
+    const [glossaryTerms, setGlossaryTerms] = useState([]);
     const [editingTerm, setEditingTerm] = useState(null);
     const [formState, setFormState] = useState({ term: '', definition: '' });
     const [message, setMessage] = useState('');
+
+    const fetchGlossary = async () => {
+        const { data, error } = await supabase.from('glossary').select('*').order('term', { ascending: true });
+        if (error) console.error('Erro ao buscar glossário:', error); else setGlossaryTerms(data);
+    };
+
+    useEffect(() => {
+        fetchGlossary();
+    }, []);
 
     useEffect(() => {
         if (editingTerm) {
@@ -769,10 +795,20 @@ const GlossaryManager = ({ glossaryTerms, fetchGlossary }) => {
     );
 };
 
-const TeamManager = ({ teamMembers, fetchTeamMembers }) => {
+const TeamManager = () => {
+    const [teamMembers, setTeamMembers] = useState([]);
     const [editingMember, setEditingMember] = useState(null);
     const [formState, setFormState] = useState({ name: '', role: '', photo: '', bio: '', display_order: 99 });
     const [message, setMessage] = useState('');
+
+    const fetchTeamMembers = async () => {
+        const { data, error } = await supabase.from('team_members').select('*').order('display_order', { ascending: true });
+        if (error) console.error('Erro ao buscar membros da equipe:', error); else setTeamMembers(data);
+    };
+
+    useEffect(() => {
+        fetchTeamMembers();
+    }, []);
 
     useEffect(() => {
         if (editingMember) {
@@ -916,48 +952,40 @@ const UserManager = ({ user }) => {
 export default function App() {
     const [page, setPage] = useState({ name: 'home', data: null });
     const [userProfile, setUserProfile] = useState(null);
-    const [articles, setArticles] = useState([]);
-    const [glossaryTerms, setGlossaryTerms] = useState([]);
-    const [teamMembers, setTeamMembers] = useState([]);
     const [currentTrack, setCurrentTrack] = useState(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
-    const fetchAllData = async () => {
-        setIsLoading(true);
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-            const { data: profile, error: profileError } = await supabase.from('profiles').select('role, full_name').eq('id', session.user.id).single();
-            if (profile) {
-                setUserProfile({ ...session.user, role: profile.role, full_name: profile.full_name });
-            } else {
-                console.error("Perfil não encontrado para o usuário, atribuindo papel padrão 'writer'.", profileError);
-                setUserProfile({ ...session.user, role: 'writer', full_name: session.user.email });
-            }
-        } else {
-            setUserProfile(null);
-        }
-
-        const articlesPromise = supabase.from('articles').select('*').order('createdAt', { ascending: false });
-        const glossaryPromise = supabase.from('glossary').select('*').order('term', { ascending: true });
-        const teamPromise = supabase.from('team_members').select('*').order('display_order', { ascending: true });
-
-        const [articlesResult, glossaryResult, teamResult] = await Promise.all([articlesPromise, glossaryPromise, teamPromise]);
-        
-        if(articlesResult.error) console.error('Erro ao buscar artigos:', articlesResult.error); else setArticles(articlesResult.data);
-        if(glossaryResult.error) console.error('Erro ao buscar glossário:', glossaryResult.error); else setGlossaryTerms(glossaryResult.data);
-        if(teamResult.error) console.error('Erro ao buscar membros da equipe:', teamResult.error); else setTeamMembers(teamResult.data);
-        
-        setIsLoading(false);
-    };
-
     useEffect(() => {
-        fetchAllData();
+        const checkUser = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+                const { data: profile, error: profileError } = await supabase.from('profiles').select('role, full_name').eq('id', session.user.id).single();
+                if (profile) {
+                    setUserProfile({ ...session.user, role: profile.role, full_name: profile.full_name });
+                } else {
+                    console.error("Perfil não encontrado para o usuário, atribuindo papel padrão 'writer'.", profileError);
+                    setUserProfile({ ...session.user, role: 'writer', full_name: session.user.email });
+                }
+            }
+            setIsLoading(false);
+        };
+        
+        checkUser();
 
         const { data: authListener } = supabase.auth.onAuthStateChange(
-            (event, session) => {
-                if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
-                    fetchAllData();
+            async (event, session) => {
+                const user = session?.user ?? null;
+                if (user) {
+                    const { data: profile, error: profileError } = await supabase.from('profiles').select('role, full_name').eq('id', user.id).single();
+                    if (profile) {
+                        setUserProfile({ ...user, role: profile.role, full_name: profile.full_name });
+                    } else {
+                        console.error("Perfil não encontrado para o usuário:", user.id, profileError);
+                        setUserProfile({ ...user, role: 'writer', full_name: user.email });
+                    }
+                } else {
+                    setUserProfile(null);
                 }
                 if (event === 'SIGNED_OUT') {
                     setPage({ name: 'home' });
@@ -991,21 +1019,19 @@ export default function App() {
             return <div className="bg-black text-white h-screen flex items-center justify-center">Carregando...</div>;
         }
         
-        const props = { setPage, articles };
-
         switch (page.name) {
-            case 'home': return <HomePage {...props} />;
-            case 'articles': return <ArticlesSection title="Todos os Artigos" {...props} />;
+            case 'home': return <HomePage setPage={setPage} />;
+            case 'articles': return <ArticlesPage setPage={setPage} />;
             case 'singleArticle': return <SingleArticlePage article={page.data} setPage={setPage} />;
             case 'episodes': return <EpisodesPage onPlay={handlePlay} />;
-            case 'glossary': return <GlossaryPage glossaryTerms={glossaryTerms} />;
-            case 'team': return <TeamPage setPage={setPage} teamMembers={teamMembers} />;
+            case 'glossary': return <GlossaryPage />;
+            case 'team': return <TeamPage setPage={setPage} />;
             case 'bio': return <BioPage member={page.data} setPage={setPage} />;
-            case 'tagPage': return <TagPage tag={page.data} {...props} />;
-            case 'search': return <SearchPage query={page.data} {...props} />;
-            case 'login': return <LoginPage setPage={setPage} setUserProfile={setUserProfile} />;
-            case 'dashboard': return userProfile ? <DashboardPage user={userProfile} setPage={setPage} fetchArticles={fetchArticles} fetchGlossary={fetchGlossary} fetchTeamMembers={fetchTeamMembers} glossaryTerms={glossaryTerms} teamMembers={teamMembers} {...props} /> : <LoginPage setPage={setPage} setUserProfile={setUserProfile} />;
-            default: return <HomePage {...props} />;
+            case 'tagPage': return <TagPage tag={page.data} setPage={setPage} />;
+            case 'search': return <SearchPage query={page.data} setPage={setPage} />;
+            case 'login': return <LoginPage setPage={setPage} />;
+            case 'dashboard': return userProfile ? <DashboardPage user={userProfile} setPage={setPage} /> : <LoginPage setPage={setPage} />;
+            default: return <HomePage setPage={setPage} />;
         }
     };
 
