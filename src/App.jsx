@@ -424,15 +424,21 @@ const LoginPage = ({ setPage, setUserProfile }) => {
     );
 };
 
-const DashboardPage = ({ user, setPage, setUserProfile, articles, fetchArticles, glossaryTerms, fetchGlossary, teamMembers, fetchTeamMembers }) => {
+const DashboardPage = ({ user, setPage, articles, fetchArticles, glossaryTerms, fetchGlossary, teamMembers, fetchTeamMembers }) => {
     const [currentView, setCurrentView] = useState('articles');
+    
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        // O listener onAuthStateChange no App.jsx irá tratar de atualizar o estado do usuário
+        setPage({ name: 'home' });
+    };
     
     return (
         <div className="bg-black text-white py-12 min-h-[80vh]">
             <div className="container mx-auto px-6">
                 <div className="flex justify-between items-center mb-8">
                     <h1 className="text-3xl font-extrabold">Painel de Controle</h1>
-                    <button onClick={async () => { await supabase.auth.signOut(); setUserProfile(null); setPage({ name: 'home' }); }} className="bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 font-bold">Sair</button>
+                    <button onClick={handleLogout} className="bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 font-bold">Sair</button>
                 </div>
                 <div className="flex gap-4 border-b-2 border-gray-800 mb-8">
                     <button onClick={() => setCurrentView('articles')} className={`py-2 px-4 font-bold ${currentView === 'articles' ? 'border-b-2 border-green-500 text-white' : 'text-gray-500'}`}>Gerenciar Artigos</button>
