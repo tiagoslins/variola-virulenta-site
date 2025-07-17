@@ -110,17 +110,34 @@ const PersistentAudioPlayer = ({ track, isPlaying, onPlayPause, onEnded }) => {
 
 // --- PÁGINAS ---
 
-const HomePage = ({ setPage, articles }) => {
+const HomePage = ({ setPage }) => {
+    const [articles, setArticles] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchArticles = async () => {
+            setIsLoading(true);
+            const { data, error } = await supabase.from('articles').select('*').order('createdAt', { ascending: false }).limit(6);
+            if (error) console.error('Erro ao buscar artigos:', error); else setArticles(data);
+            setIsLoading(false);
+        };
+        fetchArticles();
+    }, []);
+
+    if (isLoading) {
+        return <div className="text-center py-10 text-white">Carregando...</div>;
+    }
     if (!articles || articles.length === 0) {
         return <div className="text-center py-10 text-white">Nenhum artigo publicado ainda.</div>;
     }
+    
     const featuredArticle = articles[0];
     const secondaryArticles = articles.slice(1, 3);
+    const moreArticles = articles.slice(3);
 
     return (
         <div className="container mx-auto px-6 py-8">
             <div className="grid lg:grid-cols-3 gap-8">
-                {/* Featured Article */}
                 {featuredArticle && (
                     <div className="lg:col-span-2">
                         <div className="cursor-pointer group" onClick={() => setPage({ name: 'singleArticle', data: featuredArticle })}>
@@ -132,7 +149,6 @@ const HomePage = ({ setPage, articles }) => {
                         </div>
                     </div>
                 )}
-                {/* Secondary Articles */}
                 <div className="space-y-8">
                     {secondaryArticles.map(article => (
                          <div key={article.id} className="cursor-pointer group" onClick={() => setPage({ name: 'singleArticle', data: article })}>
@@ -144,9 +160,30 @@ const HomePage = ({ setPage, articles }) => {
                     ))}
                 </div>
             </div>
-            <ArticlesSection setPage={setPage} title="Mais Artigos" articles={articles.slice(3)} />
+            <ArticlesSection setPage={setPage} title="Mais Artigos" articles={moreArticles} />
         </div>
     );
+};
+
+const ArticlesPage = ({ setPage }) => {
+    const [articles, setArticles] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchAllArticles = async () => {
+            setIsLoading(true);
+            const { data, error } = await supabase.from('articles').select('*').order('createdAt', { ascending: false });
+            if (error) console.error('Erro ao buscar todos os artigos:', error); else setArticles(data);
+            setIsLoading(false);
+        };
+        fetchAllArticles();
+    }, []);
+
+    if (isLoading) {
+        return <div className="text-center py-10 text-white">Carregando artigos...</div>;
+    }
+    
+    return <ArticlesSection title="Todos os Artigos" articles={articles} setPage={setPage} />;
 };
 
 const ArticlesSection = ({ title, articles, setPage }) => (
@@ -295,44 +332,92 @@ const EpisodesPage = () => {
     );
 };
 
-const GlossaryPage = ({ glossaryTerms }) => (
-    <div className="bg-black py-12">
-        <div className="container mx-auto px-6 max-w-4xl">
-            <h1 className="text-4xl font-extrabold text-white mb-10 border-b-2 border-gray-800 pb-4">Glossário de Termos</h1>
-            <div className="space-y-6">
-                {glossaryTerms.map(item => (
-                    <div key={item.id} className="bg-gray-900 p-6 rounded-lg border border-gray-800">
-                        <h3 className="text-2xl font-bold text-white">{item.term}</h3>
-                        <p className="text-gray-400 mt-2 leading-relaxed font-serif">{item.definition}</p>
-                    </div>
-                ))}
-            </div>
-        </div>
-    </div>
-);
+const GlossaryPage = () => {
+    const [glossaryTerms, setGlossaryTerms] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-const TagPage = ({ tag, setPage, articles }) => {
-    const filteredArticles = articles.filter(article => article.tags.includes(tag));
+    useEffect(() => {
+        const fetchGlossary = async () => {
+            setIsLoading(true);
+            const { data, error } = await supabase.from('glossary').select('*').order('term', { ascending: true });
+            if (error) console.error('Erro ao buscar glossário:', error); else setGlossaryTerms(data);
+            setIsLoading(false);
+        };
+        fetchGlossary();
+    }, []);
+
+    if (isLoading) {
+        return <div className="text-center py-10 text-white">Carregando glossário...</div>;
+    }
+
     return (
         <div className="bg-black py-12">
-            <ArticlesSection title={`Artigos com a tag: #${tag}`} articles={filteredArticles} setPage={setPage} />
+            <div className="container mx-auto px-6 max-w-4xl">
+                <h1 className="text-4xl font-extrabold text-white mb-10 border-b-2 border-gray-800 pb-4">Glossário de Termos</h1>
+                <div className="space-y-6">
+                    {glossaryTerms.map(item => (
+                        <div key={item.id} className="bg-gray-900 p-6 rounded-lg border border-gray-800">
+                            <h3 className="text-2xl font-bold text-white">{item.term}</h3>
+                            <p className="text-gray-400 mt-2 leading-relaxed font-serif">{item.definition}</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
         </div>
     );
 };
 
-const SearchPage = ({ query, setPage, articles }) => {
-    const lowerCaseQuery = query.toLowerCase();
-    const results = articles.filter(
-        article => article.title.toLowerCase().includes(lowerCaseQuery) || article.content.toLowerCase().includes(lowerCaseQuery)
+const TagPage = ({ tag, setPage }) => {
+    const [articles, setArticles] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchTaggedArticles = async () => {
+            setIsLoading(true);
+            const { data, error } = await supabase.from('articles').select('*').contains('tags', [tag]).order('createdAt', { ascending: false });
+            if (error) console.error(`Erro ao buscar artigos com a tag ${tag}:`, error); else setArticles(data);
+            setIsLoading(false);
+        };
+        fetchTaggedArticles();
+    }, [tag]);
+
+    if (isLoading) {
+        return <div className="text-center py-10 text-white">Carregando artigos...</div>;
+    }
+
+    return (
+        <div className="bg-black py-12">
+            <ArticlesSection title={`Artigos com a tag: #${tag}`} articles={articles} setPage={setPage} />
+        </div>
     );
+};
+
+const SearchPage = ({ query, setPage }) => {
+    const [articles, setArticles] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchSearchedArticles = async () => {
+            setIsLoading(true);
+            const { data, error } = await supabase.from('articles').select('*').ilike('title', `%${query}%`).order('createdAt', { ascending: false });
+            if (error) console.error(`Erro ao buscar por "${query}":`, error); else setArticles(data);
+            setIsLoading(false);
+        };
+        fetchSearchedArticles();
+    }, [query]);
+
+    if (isLoading) {
+        return <div className="text-center py-10 text-white">Buscando...</div>;
+    }
+
     return (
         <div className="bg-black py-12 min-h-[70vh]">
             <div className="container mx-auto px-6">
                 <h1 className="text-3xl font-extrabold text-white mb-10 border-b-2 border-gray-800 pb-4">
-                    {results.length > 0 ? `Resultados da busca por: "${query}"` : `Nenhum resultado para: "${query}"`}
+                    {articles.length > 0 ? `Resultados da busca por: "${query}"` : `Nenhum resultado para: "${query}"`}
                 </h1>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {results.map(article => (
+                    {articles.map(article => (
                         <ArticleCard key={article.id} article={article} setPage={setPage} />
                     ))}
                 </div>
@@ -341,25 +426,44 @@ const SearchPage = ({ query, setPage, articles }) => {
     );
 };
 
-const TeamPage = ({ setPage, teamMembers }) => (
-    <div className="bg-black py-12">
-        <div className="container mx-auto px-6">
-            <h1 className="text-4xl font-extrabold text-white mb-10 border-b-2 border-gray-800 pb-4">Quem Somos</h1>
-            <div className="grid md:grid-cols-3 gap-10 text-center">
-                {teamMembers.map(member => (
-                    <div key={member.id} className="p-6">
-                        <img src={member.photo} alt={member.name} className="w-32 h-32 rounded-full mx-auto mb-4" />
-                        <h3 className="text-xl font-bold text-white">{member.name}</h3>
-                        <p className="text-gray-400 mb-4">{member.role}</p>
-                        <button onClick={() => setPage({name: 'bio', data: member})} className="font-bold text-green-500 hover:underline">
-                            Conheça +
-                        </button>
-                    </div>
-                ))}
+const TeamPage = ({ setPage }) => {
+    const [teamMembers, setTeamMembers] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchTeam = async () => {
+            setIsLoading(true);
+            const { data, error } = await supabase.from('team_members').select('*').order('display_order', { ascending: true });
+            if (error) console.error('Erro ao buscar equipa:', error); else setTeamMembers(data);
+            setIsLoading(false);
+        };
+        fetchTeam();
+    }, []);
+
+    if (isLoading) {
+        return <div className="text-center py-10 text-white">Carregando equipa...</div>;
+    }
+
+    return (
+        <div className="bg-black py-12">
+            <div className="container mx-auto px-6">
+                <h1 className="text-4xl font-extrabold text-white mb-10 border-b-2 border-gray-800 pb-4">Quem Somos</h1>
+                <div className="grid md:grid-cols-3 gap-10 text-center">
+                    {teamMembers.map(member => (
+                        <div key={member.id} className="p-6">
+                            <img src={member.photo} alt={member.name} className="w-32 h-32 rounded-full mx-auto mb-4" />
+                            <h3 className="text-xl font-bold text-white">{member.name}</h3>
+                            <p className="text-gray-400 mb-4">{member.role}</p>
+                            <button onClick={() => setPage({name: 'bio', data: member})} className="font-bold text-green-500 hover:underline">
+                                Conheça +
+                            </button>
+                        </div>
+                    ))}
+                </div>
             </div>
         </div>
-    </div>
-);
+    );
+};
 
 const BioPage = ({ member, setPage }) => (
     <div className="bg-black py-12 min-h-[70vh]">
@@ -377,34 +481,25 @@ const BioPage = ({ member, setPage }) => (
     </div>
 );
 
-const LoginPage = ({ setPage, setUserProfile }) => {
+const LoginPage = ({ setPage }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
+        setIsLoading(true);
         try {
-            const { data: { user }, error } = await supabase.auth.signInWithPassword({ email, password });
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) throw error;
-            
-            const { data: profile, error: profileError } = await supabase
-                .from('profiles')
-                .select('role, full_name')
-                .eq('id', user.id)
-                .single();
-            
-            if (profileError) {
-                console.error("Erro ao buscar perfil, mas o login foi bem-sucedido:", profileError);
-                setUserProfile({ ...user, role: 'writer', full_name: user.email });
-            } else {
-                setUserProfile({ ...user, role: profile.role, full_name: profile.full_name });
-            }
-            
+            // O listener onAuthStateChange no App.jsx irá tratar de atualizar o estado e redirecionar
             setPage({ name: 'dashboard' });
         } catch (err) {
             setError(err.message);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -422,13 +517,16 @@ const LoginPage = ({ setPage, setUserProfile }) => {
                         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" required />
                     </div>
                     {error && <p className="text-red-500 text-center mb-4">{error}</p>}
-                    <button type="submit" className="w-full bg-green-500 text-black font-bold py-2 rounded-md hover:bg-green-400">Entrar</button>
+                    <button type="submit" disabled={isLoading} className="w-full bg-green-500 text-black font-bold py-2 rounded-md hover:bg-green-400 disabled:bg-gray-500">
+                        {isLoading ? 'A entrar...' : 'Entrar'}
+                    </button>
                 </form>
             </div>
         </div>
     );
 };
 
+// ... (Restante do código, incluindo DashboardPage e seus subcomponentes, permanece o mesmo)
 const DashboardPage = ({ user, setPage, articles, fetchArticles, glossaryTerms, fetchGlossary, teamMembers, fetchTeamMembers }) => {
     const [currentView, setCurrentView] = useState('articles');
     
@@ -825,53 +923,41 @@ export default function App() {
     const [isPlaying, setIsPlaying] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
-    const fetchArticles = async () => {
-        const { data, error } = await supabase.from('articles').select('*').order('createdAt', { ascending: false });
-        if (error) console.error('Erro ao buscar artigos:', error); else setArticles(data);
-    };
+    const fetchAllData = async () => {
+        setIsLoading(true);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+            const { data: profile, error: profileError } = await supabase.from('profiles').select('role, full_name').eq('id', session.user.id).single();
+            if (profile) {
+                setUserProfile({ ...session.user, role: profile.role, full_name: profile.full_name });
+            } else {
+                console.error("Perfil não encontrado para o usuário, atribuindo papel padrão 'writer'.", profileError);
+                setUserProfile({ ...session.user, role: 'writer', full_name: session.user.email });
+            }
+        } else {
+            setUserProfile(null);
+        }
 
-    const fetchGlossary = async () => {
-        const { data, error } = await supabase.from('glossary').select('*').order('term', { ascending: true });
-        if (error) console.error('Erro ao buscar glossário:', error); else setGlossaryTerms(data);
-    };
+        const articlesPromise = supabase.from('articles').select('*').order('createdAt', { ascending: false });
+        const glossaryPromise = supabase.from('glossary').select('*').order('term', { ascending: true });
+        const teamPromise = supabase.from('team_members').select('*').order('display_order', { ascending: true });
 
-    const fetchTeamMembers = async () => {
-        const { data, error } = await supabase.from('team_members').select('*').order('display_order', { ascending: true });
-        if (error) console.error('Erro ao buscar membros da equipe:', error); else setTeamMembers(data);
+        const [articlesResult, glossaryResult, teamResult] = await Promise.all([articlesPromise, glossaryPromise, teamPromise]);
+        
+        if(articlesResult.error) console.error('Erro ao buscar artigos:', articlesResult.error); else setArticles(articlesResult.data);
+        if(glossaryResult.error) console.error('Erro ao buscar glossário:', glossaryResult.error); else setGlossaryTerms(glossaryResult.data);
+        if(teamResult.error) console.error('Erro ao buscar membros da equipe:', teamResult.error); else setTeamMembers(teamResult.data);
+        
+        setIsLoading(false);
     };
 
     useEffect(() => {
-        const loadInitialData = async () => {
-            setIsLoading(true);
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session?.user) {
-                const { data: profile, error: profileError } = await supabase.from('profiles').select('role, full_name').eq('id', session.user.id).single();
-                if (profile) {
-                    setUserProfile({ ...session.user, role: profile.role, full_name: profile.full_name });
-                } else {
-                    console.error("Perfil não encontrado para o usuário, atribuindo papel padrão 'writer'.", profileError);
-                    setUserProfile({ ...session.user, role: 'writer', full_name: session.user.email });
-                }
-            }
-            await Promise.all([fetchArticles(), fetchGlossary(), fetchTeamMembers()]);
-            setIsLoading(false);
-        };
-
-        loadInitialData();
+        fetchAllData();
 
         const { data: authListener } = supabase.auth.onAuthStateChange(
-            async (event, session) => {
-                const user = session?.user ?? null;
-                if (user) {
-                    const { data: profile, error: profileError } = await supabase.from('profiles').select('role, full_name').eq('id', user.id).single();
-                    if (profile) {
-                        setUserProfile({ ...user, role: profile.role, full_name: profile.full_name });
-                    } else {
-                        console.error("Perfil não encontrado para o usuário:", user.id, profileError);
-                        setUserProfile({ ...user, role: 'writer', full_name: user.email });
-                    }
-                } else {
-                    setUserProfile(null);
+            (event, session) => {
+                if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
+                    fetchAllData();
                 }
                 if (event === 'SIGNED_OUT') {
                     setPage({ name: 'home' });
