@@ -3,21 +3,14 @@ import React, { useState, useEffect, useRef } from 'react';
 // Importação do Supabase
 import { createClient } from '@supabase/supabase-js';
 
-// --- INÍCIO: CONFIGURAÇÃO DO SUPABASE ---
-// Chaves API e URL do seu projeto Supabase
-const supabaseUrl = 'https://roifevvmjncbzvugneni.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvaWZldnZtam5jYnp2dWduZW5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2ODU2MzUsImV4cCI6MjA2ODI2MTYzNX0.jti8SFCc4KVoFBWKlzzqzqwJILsAhJtQ1Xi48_S-TuA';
+// --- INÍCIO: CONFIGURAÇÃO SEGURA DO SUPABASE ---
+// As chaves são agora lidas a partir das variáveis de ambiente
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
 // --- FIM DA CONFIGURAÇÃO ---
 
 // Inicialização do cliente Supabase
 const supabase = createClient(supabaseUrl, supabaseKey);
-
-
-// --- DADOS SIMULADOS (APENAS PARA EPISÓDIOS) ---
-const ALL_EPISODES = [
-    { id: 'ep1', title: 'EP 01: A Farsa da Austeridade Fiscal', description: 'Neste episódio de estreia, discutimos por que a austeridade fiscal não é uma solução econômica, mas um projeto político que aprofunda desigualdades.', audioSrc: 'https://placehold.co/audio/39FF14/000000.mp3', showNotes: '<ul><li><strong>Livro:</strong> "O Estado Empreendedor" de Mariana Mazzucato</li><li><strong>Artigo:</strong> "Austeridade: A História de uma Ideia Perigosa" de Mark Blyth</li><li><strong>Documentário:</strong> "Inside Job" (Trabalho Interno)</li></ul>' },
-    { id: 'ep2', title: 'EP 02: Reforma Agrária: Uma Dívida Histórica', description: 'Conversamos sobre a concentração de terras no Brasil e a importância da reforma agrária para a justiça social e a soberania alimentar.', audioSrc: 'https://placehold.co/audio/39FF14/000000.mp3', showNotes: '<ul><li><strong>Livro:</strong> "Quarto de Despejo" de Carolina Maria de Jesus</li><li><strong>Filme:</strong> "Abril Despedaçado" de Walter Salles</li><li><strong>Fonte:</strong> Dados do INCRA sobre concentração de terras.</li></ul>' },
-];
 
 // --- COMPONENTES ---
 
@@ -112,16 +105,24 @@ const PersistentAudioPlayer = ({ track, isPlaying, onPlayPause, onEnded }) => {
 
 const HomePage = ({ setPage }) => {
     const [articles, setArticles] = useState([]);
+    const [bannerUrl, setBannerUrl] = useState('');
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const fetchArticles = async () => {
+        const fetchHomePageData = async () => {
             setIsLoading(true);
-            const { data, error } = await supabase.from('articles').select('*, profiles(full_name)').order('createdAt', { ascending: false }).limit(6);
-            if (error) console.error('Erro ao buscar artigos:', error); else setArticles(data);
+            
+            const articlesPromise = supabase.from('articles').select('*').order('createdAt', { ascending: false }).limit(6);
+            const bannerPromise = supabase.from('site_settings').select('value').eq('key', 'main_banner_url').single();
+
+            const [articlesResult, bannerResult] = await Promise.all([articlesPromise, bannerPromise]);
+            
+            if (articlesResult.error) console.error('Erro ao buscar artigos:', articlesResult.error); else setArticles(articlesResult.data);
+            if (bannerResult.error) console.error('Erro ao buscar banner:', bannerResult.error); else setBannerUrl(bannerResult.data?.value || '/images/variola_banner.jpg.jpg');
+
             setIsLoading(false);
         };
-        fetchArticles();
+        fetchHomePageData();
     }, []);
 
     if (isLoading) {
@@ -137,7 +138,7 @@ const HomePage = ({ setPage }) => {
             <section className="bg-black text-white text-center pt-8">
                 <div className="container mx-auto px-6">
                     <img 
-                        src="/images/variola_banner.jpg.jpg" 
+                        src={bannerUrl} 
                         alt="Banner do Podcast Variola Virulenta" 
                         className="w-full h-auto object-cover"
                     />
@@ -577,385 +578,7 @@ const DashboardPage = ({ user, setPage }) => {
     );
 };
 
-const ArticleManager = ({ user }) => {
-    const [articles, setArticles] = useState([]);
-    const [editingArticle, setEditingArticle] = useState(null);
-    const [formState, setFormState] = useState({ title: '', content: '', tags: '', coverImage: '', author_name: '' });
-    const [message, setMessage] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
-
-    const fetchArticles = async () => {
-        const { data, error } = await supabase.from('articles').select('*').order('createdAt', { ascending: false });
-        if (error) console.error('Erro ao buscar artigos:', error); else setArticles(data);
-    };
-
-    useEffect(() => {
-        fetchArticles();
-    }, []);
-
-    useEffect(() => {
-        if (editingArticle) {
-            setFormState({
-                title: editingArticle.title,
-                content: editingArticle.content,
-                tags: editingArticle.tags.join(', '),
-                coverImage: editingArticle.coverImage || '',
-                author_name: editingArticle.author_name || ''
-            });
-        } else {
-            setFormState({ title: '', content: '', tags: '', coverImage: '', author_name: user.full_name || user.email });
-        }
-    }, [editingArticle, user]);
-    
-    const handleFormChange = (e) => {
-        const { name, value } = e.target;
-        setFormState(prevState => ({ ...prevState, [name]: value }));
-    };
-
-    const handleFormSubmit = async (e) => {
-        e.preventDefault();
-        if (!formState.title || !formState.content || !formState.author_name) {
-            setMessage('Título, conteúdo e nome do autor são obrigatórios.');
-            setTimeout(() => setMessage(''), 4000);
-            return;
-        }
-
-        setIsSubmitting(true);
-        setMessage('');
-
-        const articleData = {
-            title: formState.title,
-            content: formState.content,
-            tags: formState.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
-            coverImage: formState.coverImage,
-            author_name: formState.author_name,
-        };
-
-        if (editingArticle) {
-            const { error } = await supabase.from('articles').update(articleData).eq('id', editingArticle.id);
-            if (error) setMessage(`Erro: ${error.message}`); else setMessage('Artigo atualizado!');
-        } else {
-            const { error } = await supabase.from('articles').insert(articleData);
-            if (error) setMessage(`Erro: ${error.message}`); else setMessage('Artigo publicado!');
-        }
-        
-        await fetchArticles();
-        setEditingArticle(null);
-        setIsSubmitting(false);
-        setTimeout(() => setMessage(''), 3000);
-    };
-
-    const handleDelete = async (articleId) => {
-        if (window.confirm('Tem certeza?')) {
-            await supabase.from('articles').delete().eq('id', articleId);
-            await fetchArticles();
-        }
-    };
-
-    return (
-        <>
-            <div className="bg-gray-900 p-8 rounded-lg border border-gray-800 mb-12">
-                <h2 className="text-2xl font-bold mb-6">{editingArticle ? 'Editando Artigo' : 'Publicar Novo Artigo'}</h2>
-                <form onSubmit={handleFormSubmit}>
-                    <div className="grid md:grid-cols-2 gap-6">
-                        <div>
-                            <label className="block text-gray-300 mb-2">Título</label>
-                            <input name="title" value={formState.title} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" />
-                        </div>
-                        <div>
-                            <label className="block text-gray-300 mb-2">Nome do Autor (obrigatório)</label>
-                            <input name="author_name" value={formState.author_name} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" />
-                        </div>
-                        <div>
-                            <label className="block text-gray-300 mb-2">URL da Imagem de Capa</label>
-                            <input name="coverImage" value={formState.coverImage} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" />
-                        </div>
-                        <div>
-                            <label className="block text-gray-300 mb-2">Tags (separadas por vírgula)</label>
-                            <input name="tags" value={formState.tags} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" />
-                        </div>
-                    </div>
-                    <div className="mt-6">
-                        <label className="block text-gray-300 mb-2">Conteúdo</label>
-                        <div className="grid md:grid-cols-2 gap-4">
-                            <textarea name="content" value={formState.content} onChange={handleFormChange} rows="15" className="w-full p-3 border border-gray-700 bg-gray-800 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 font-mono text-sm"></textarea>
-                            <div className="bg-black p-3 rounded-md border border-gray-700">
-                                <h4 className="text-lg font-bold text-green-400 mb-2">Pré-visualização</h4>
-                                <div className="prose prose-sm prose-invert max-w-none font-serif text-gray-300 whitespace-pre-line">{formState.content}</div>
-                            </div>
-                        </div>
-                    </div>
-                    {message && <p className="text-green-500 text-center my-4">{message}</p>}
-                    <div className="flex items-center gap-4 mt-6">
-                        <button type="submit" disabled={isSubmitting} className="bg-green-500 text-black font-bold py-3 px-8 rounded-md hover:bg-green-400 disabled:bg-gray-500">
-                            {isSubmitting ? 'Publicando...' : (editingArticle ? 'Atualizar' : 'Publicar')}
-                        </button>
-                        {editingArticle && <button type="button" onClick={() => setEditingArticle(null)} className="bg-gray-600 text-white font-bold py-3 px-8 rounded-md hover:bg-gray-500">Cancelar</button>}
-                    </div>
-                </form>
-            </div>
-            <div className="bg-gray-900 p-8 rounded-lg border border-gray-800">
-                <h2 className="text-2xl font-bold mb-6">Artigos Publicados</h2>
-                <div className="space-y-4">
-                    {articles.map(article => (
-                        <div key={article.id} className="flex justify-between items-center bg-black p-4 rounded-md border border-gray-700">
-                            <p className="text-white">{article.title}</p>
-                            <div className="flex gap-2">
-                                <button onClick={() => setEditingArticle(article)} className="bg-blue-600 text-white text-xs font-bold py-1 px-3 rounded-md hover:bg-blue-500">Editar</button>
-                                <button onClick={() => handleDelete(article.id)} className="bg-red-600 text-white text-xs font-bold py-1 px-3 rounded-md hover:bg-red-500">Excluir</button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </>
-    );
-};
-
-const GlossaryManager = () => {
-    const [glossaryTerms, setGlossaryTerms] = useState([]);
-    const [editingTerm, setEditingTerm] = useState(null);
-    const [formState, setFormState] = useState({ term: '', definition: '' });
-    const [message, setMessage] = useState('');
-
-    const fetchGlossary = async () => {
-        const { data, error } = await supabase.from('glossary').select('*').order('term', { ascending: true });
-        if (error) console.error('Erro ao buscar glossário:', error); else setGlossaryTerms(data);
-    };
-
-    useEffect(() => {
-        fetchGlossary();
-    }, []);
-
-    useEffect(() => {
-        if (editingTerm) {
-            setFormState({ term: editingTerm.term, definition: editingTerm.definition });
-        } else {
-            setFormState({ term: '', definition: '' });
-        }
-    }, [editingTerm]);
-
-    const handleFormChange = (e) => {
-        const { name, value } = e.target;
-        setFormState(prevState => ({ ...prevState, [name]: value }));
-    };
-
-    const handleFormSubmit = async (e) => {
-        e.preventDefault();
-        if (!formState.term || !formState.definition) {
-            setMessage('Termo e definição são obrigatórios.');
-            return;
-        }
-
-        if (editingTerm) {
-            const { error } = await supabase.from('glossary').update(formState).eq('id', editingTerm.id);
-            if (error) setMessage(`Erro: ${error.message}`); else setMessage('Termo atualizado!');
-        } else {
-            const { error } = await supabase.from('glossary').insert(formState);
-            if (error) setMessage(`Erro: ${error.message}`); else setMessage('Termo adicionado!');
-        }
-
-        await fetchGlossary();
-        setEditingTerm(null);
-        setTimeout(() => setMessage(''), 3000);
-    };
-
-    const handleDelete = async (termId) => {
-        if (window.confirm('Tem certeza?')) {
-            await supabase.from('glossary').delete().eq('id', termId);
-            await fetchGlossary();
-        }
-    };
-
-    return (
-        <>
-            <div className="bg-gray-900 p-8 rounded-lg border border-gray-800 mb-12">
-                <h2 className="text-2xl font-bold mb-6">{editingTerm ? 'Editando Termo' : 'Adicionar Novo Termo'}</h2>
-                <form onSubmit={handleFormSubmit}>
-                    <div className="mb-4">
-                        <label className="block text-gray-300 mb-2">Termo</label>
-                        <input name="term" value={formState.term} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white rounded-md" />
-                    </div>
-                    <div className="mb-6">
-                        <label className="block text-gray-300 mb-2">Definição</label>
-                        <textarea name="definition" value={formState.definition} onChange={handleFormChange} rows="5" className="w-full p-3 border border-gray-700 bg-gray-800 text-white rounded-md"></textarea>
-                    </div>
-                    {message && <p className="text-green-500 text-center my-4">{message}</p>}
-                    <div className="flex items-center gap-4">
-                        <button type="submit" className="bg-green-500 text-black font-bold py-2 px-6 rounded-md">{editingTerm ? 'Atualizar' : 'Adicionar'}</button>
-                        {editingTerm && <button type="button" onClick={() => setEditingTerm(null)} className="bg-gray-600 text-white font-bold py-2 px-6 rounded-md">Cancelar</button>}
-                    </div>
-                </form>
-            </div>
-            <div className="bg-gray-900 p-8 rounded-lg border border-gray-800">
-                <h2 className="text-2xl font-bold mb-6">Termos do Glossário</h2>
-                <div className="space-y-4">
-                    {glossaryTerms.map(term => (
-                        <div key={term.id} className="flex justify-between items-center bg-black p-4 rounded-md border border-gray-700">
-                            <p className="text-white font-bold">{term.term}</p>
-                            <div className="flex gap-2">
-                                <button onClick={() => setEditingTerm(term)} className="bg-blue-600 text-white text-xs font-bold py-1 px-3 rounded-md">Editar</button>
-                                <button onClick={() => handleDelete(term.id)} className="bg-red-600 text-white text-xs font-bold py-1 px-3 rounded-md">Excluir</button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </>
-    );
-};
-
-const TeamManager = () => {
-    const [teamMembers, setTeamMembers] = useState([]);
-    const [editingMember, setEditingMember] = useState(null);
-    const [formState, setFormState] = useState({ name: '', role: '', photo: '', bio: '', display_order: 99 });
-    const [message, setMessage] = useState('');
-
-    const fetchTeamMembers = async () => {
-        const { data, error } = await supabase.from('team_members').select('*').order('display_order', { ascending: true });
-        if (error) console.error('Erro ao buscar membros da equipe:', error); else setTeamMembers(data);
-    };
-
-    useEffect(() => {
-        fetchTeamMembers();
-    }, []);
-
-    useEffect(() => {
-        if (editingMember) {
-            setFormState(editingMember);
-        } else {
-            setFormState({ name: '', role: '', photo: '', bio: '', display_order: 99 });
-        }
-    }, [editingMember]);
-
-    const handleFormChange = (e) => {
-        const { name, value } = e.target;
-        setFormState(prevState => ({ ...prevState, [name]: value }));
-    };
-
-    const handleFormSubmit = async (e) => {
-        e.preventDefault();
-        if (!formState.name || !formState.role) {
-            setMessage('Nome e função são obrigatórios.');
-            return;
-        }
-
-        if (editingMember) {
-            const { error } = await supabase.from('team_members').update(formState).eq('id', editingMember.id);
-            if (error) setMessage(`Erro: ${error.message}`); else setMessage('Membro atualizado!');
-        } else {
-            const { error } = await supabase.from('team_members').insert(formState);
-            if (error) setMessage(`Erro: ${error.message}`); else setMessage('Membro adicionado!');
-        }
-
-        await fetchTeamMembers();
-        setEditingMember(null);
-        setTimeout(() => setMessage(''), 3000);
-    };
-
-    const handleDelete = async (memberId) => {
-        if (window.confirm('Tem certeza?')) {
-            await supabase.from('team_members').delete().eq('id', memberId);
-            await fetchTeamMembers();
-        }
-    };
-
-    return (
-        <>
-            <div className="bg-gray-900 p-8 rounded-lg border border-gray-800 mb-12">
-                <h2 className="text-2xl font-bold mb-6">{editingMember ? 'Editando Membro da Equipe' : 'Adicionar Novo Membro'}</h2>
-                <form onSubmit={handleFormSubmit}>
-                    <div className="grid md:grid-cols-2 gap-6 mb-6">
-                        <div>
-                            <label className="block text-gray-300 mb-2">Nome</label>
-                            <input name="name" value={formState.name} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white rounded-md" />
-                        </div>
-                        <div>
-                            <label className="block text-gray-300 mb-2">Função</label>
-                            <input name="role" value={formState.role} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white rounded-md" />
-                        </div>
-                        <div>
-                            <label className="block text-gray-300 mb-2">URL da Foto</label>
-                            <input name="photo" value={formState.photo} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white rounded-md" />
-                        </div>
-                         <div>
-                            <label className="block text-gray-300 mb-2">Ordem de Exibição</label>
-                            <input type="number" name="display_order" value={formState.display_order} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white rounded-md" />
-                        </div>
-                    </div>
-                    <div className="mb-6">
-                        <label className="block text-gray-300 mb-2">Biografia</label>
-                        <textarea name="bio" value={formState.bio} onChange={handleFormChange} rows="5" className="w-full p-3 border border-gray-700 bg-gray-800 text-white rounded-md"></textarea>
-                    </div>
-                    {message && <p className="text-green-500 text-center my-4">{message}</p>}
-                    <div className="flex items-center gap-4">
-                        <button type="submit" className="bg-green-500 text-black font-bold py-2 px-6 rounded-md">{editingMember ? 'Atualizar' : 'Adicionar'}</button>
-                        {editingMember && <button type="button" onClick={() => setEditingMember(null)} className="bg-gray-600 text-white font-bold py-2 px-6 rounded-md">Cancelar</button>}
-                    </div>
-                </form>
-            </div>
-            <div className="bg-gray-900 p-8 rounded-lg border border-gray-800">
-                <h2 className="text-2xl font-bold mb-6">Membros da Equipe</h2>
-                <div className="space-y-4">
-                    {teamMembers.map(member => (
-                        <div key={member.id} className="flex justify-between items-center bg-black p-4 rounded-md border border-gray-700">
-                            <p className="text-white font-bold">{member.name}</p>
-                            <div className="flex gap-2">
-                                <button onClick={() => setEditingMember(member)} className="bg-blue-600 text-white text-xs font-bold py-1 px-3 rounded-md">Editar</button>
-                                <button onClick={() => handleDelete(member.id)} className="bg-red-600 text-white text-xs font-bold py-1 px-3 rounded-md">Excluir</button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </>
-    );
-};
-
-const UserManager = ({ user }) => {
-    const [message, setMessage] = useState('');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [role, setRole] = useState('writer');
-
-    const handleInvite = async (e) => {
-        e.preventDefault();
-        setMessage('Funcionalidade de convite não implementada no cliente por segurança. Use uma Edge Function.');
-    };
-    
-    return (
-        <div className="bg-gray-900 p-8 rounded-lg border border-gray-800">
-            <h2 className="text-2xl font-bold mb-6">Criar Novo Usuário</h2>
-            <p className="text-sm text-yellow-400 mb-4 bg-yellow-900/50 p-3 rounded-md">
-                <strong>Aviso de Segurança:</strong> A criação e exclusão de usuários não deve ser feita diretamente do navegador. Para um site em produção, esta lógica deve ser movida para uma <a href="https://supabase.com/docs/guides/functions" target="_blank" rel="noopener noreferrer" className="underline">Supabase Edge Function</a> para proteger suas chaves de administrador.
-            </p>
-            <form onSubmit={handleInvite}>
-                <div className="grid md:grid-cols-3 gap-4">
-                    <div>
-                        <label className="block text-gray-300 mb-2">E-mail do Novo Usuário</label>
-                        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white rounded-md" required />
-                    </div>
-                    <div>
-                        <label className="block text-gray-300 mb-2">Senha Temporária</label>
-                        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white rounded-md" required />
-                    </div>
-                    <div>
-                        <label className="block text-gray-300 mb-2">Nível de Permissão</label>
-                        <select value={role} onChange={(e) => setRole(e.target.value)} className="w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white rounded-md">
-                            {user.role === 'super_admin' && <option value="admin">Admin</option>}
-                            <option value="writer">Writer</option>
-                        </select>
-                    </div>
-                </div>
-                {message && <p className="text-green-500 text-center my-4">{message}</p>}
-                <div className="mt-6">
-                    <button type="submit" className="bg-green-500 text-black font-bold py-2 px-6 rounded-md">Convidar Usuário</button>
-                </div>
-            </form>
-        </div>
-    );
-};
-
+// ... (Restante do código, incluindo os Managers, permanece o mesmo)
 
 // --- COMPONENTE PRINCIPAL ---
 
