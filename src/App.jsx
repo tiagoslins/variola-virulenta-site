@@ -12,6 +12,13 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 // Inicialização do cliente Supabase
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+
+// --- DADOS SIMULADOS (APENAS PARA EPISÓDIOS) ---
+const ALL_EPISODES = [
+    { id: 'ep1', title: 'EP 01: A Farsa da Austeridade Fiscal', description: 'Neste episódio de estreia, discutimos por que a austeridade fiscal não é uma solução econômica, mas um projeto político que aprofunda desigualdades.', audioSrc: 'https://placehold.co/audio/39FF14/000000.mp3', showNotes: '<ul><li><strong>Livro:</strong> "O Estado Empreendedor" de Mariana Mazzucato</li><li><strong>Artigo:</strong> "Austeridade: A História de uma Ideia Perigosa" de Mark Blyth</li><li><strong>Documentário:</strong> "Inside Job" (Trabalho Interno)</li></ul>' },
+    { id: 'ep2', title: 'EP 02: Reforma Agrária: Uma Dívida Histórica', description: 'Conversamos sobre a concentração de terras no Brasil e a importância da reforma agrária para a justiça social e a soberania alimentar.', audioSrc: 'https://placehold.co/audio/39FF14/000000.mp3', showNotes: '<ul><li><strong>Livro:</strong> "Quarto de Despejo" de Carolina Maria de Jesus</li><li><strong>Filme:</strong> "Abril Despedaçado" de Walter Salles</li><li><strong>Fonte:</strong> Dados do INCRA sobre concentração de terras.</li></ul>' },
+];
+
 // --- COMPONENTES ---
 
 const Header = ({ setPage, onSearch, user }) => {
@@ -127,13 +134,19 @@ const HomePage = ({ setPage }) => {
 
     return (
         <>
-            <section className="bg-black text-white text-center py-12">
+            <section className="bg-black text-white text-center pt-8">
                 <div className="container mx-auto px-6">
                     <img 
                         src="/images/variola_banner.jpg.jpg" 
                         alt="Banner do Podcast Variola Virulenta" 
-                        className="w-full h-auto object-cover mb-8"
+                        className="w-full h-auto object-cover"
                     />
+                </div>
+            </section>
+            <section className="bg-black text-white text-center py-12">
+                 <div className="container mx-auto px-6">
+                    <h1 className="text-5xl font-extrabold mb-4 text-green-400 tracking-tight">Pensamento Crítico para Transformar a Realidade</h1>
+                    <p className="text-xl text-gray-300 max-w-3xl mx-auto">Debates sobre política, economia e história para além do senso comum.</p>
                 </div>
             </section>
             
