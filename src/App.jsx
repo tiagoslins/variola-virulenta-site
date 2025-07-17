@@ -3,14 +3,21 @@ import React, { useState, useEffect, useRef } from 'react';
 // Importação do Supabase
 import { createClient } from '@supabase/supabase-js';
 
-// --- INÍCIO: CONFIGURAÇÃO DO SUPABASE ---
-// Chaves API e URL do seu projeto Supabase
-const supabaseUrl = 'https://roifevvmjncbzvugneni.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvaWZldnZtam5jYnp2dWduZW5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2ODU2MzUsImV4cCI6MjA2ODI2MTYzNX0.jti8SFCc4KVoFBWKlzzqzqwJILsAhJtQ1Xi48_S-TuA';
+// --- INÍCIO: CONFIGURAÇÃO SEGURA DO SUPABASE ---
+// As chaves são agora lidas a partir das variáveis de ambiente
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
 // --- FIM DA CONFIGURAÇÃO ---
 
 // Inicialização do cliente Supabase
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+
+// --- DADOS SIMULADOS (APENAS PARA EPISÓDIOS) ---
+const ALL_EPISODES = [
+    { id: 'ep1', title: 'EP 01: A Farsa da Austeridade Fiscal', description: 'Neste episódio de estreia, discutimos por que a austeridade fiscal não é uma solução econômica, mas um projeto político que aprofunda desigualdades.', audioSrc: 'https://placehold.co/audio/39FF14/000000.mp3', showNotes: '<ul><li><strong>Livro:</strong> "O Estado Empreendedor" de Mariana Mazzucato</li><li><strong>Artigo:</strong> "Austeridade: A História de uma Ideia Perigosa" de Mark Blyth</li><li><strong>Documentário:</strong> "Inside Job" (Trabalho Interno)</li></ul>' },
+    { id: 'ep2', title: 'EP 02: Reforma Agrária: Uma Dívida Histórica', description: 'Conversamos sobre a concentração de terras no Brasil e a importância da reforma agrária para a justiça social e a soberania alimentar.', audioSrc: 'https://placehold.co/audio/39FF14/000000.mp3', showNotes: '<ul><li><strong>Livro:</strong> "Quarto de Despejo" de Carolina Maria de Jesus</li><li><strong>Filme:</strong> "Abril Despedaçado" de Walter Salles</li><li><strong>Fonte:</strong> Dados do INCRA sobre concentração de terras.</li></ul>' },
+];
 
 // --- COMPONENTES ---
 
@@ -110,7 +117,7 @@ const HomePage = ({ setPage }) => {
     useEffect(() => {
         const fetchArticles = async () => {
             setIsLoading(true);
-            const { data, error } = await supabase.from('articles').select('*').order('createdAt', { ascending: false }).limit(6);
+            const { data, error } = await supabase.from('articles').select('*, profiles(full_name)').order('createdAt', { ascending: false }).limit(6);
             if (error) console.error('Erro ao buscar artigos:', error); else setArticles(data);
             setIsLoading(false);
         };
@@ -178,7 +185,7 @@ const ArticlesPage = ({ setPage }) => {
     useEffect(() => {
         const fetchAllArticles = async () => {
             setIsLoading(true);
-            const { data, error } = await supabase.from('articles').select('*').order('createdAt', { ascending: false });
+            const { data, error } = await supabase.from('articles').select('*, profiles(full_name)').order('createdAt', { ascending: false });
             if (error) console.error('Erro ao buscar todos os artigos:', error); else setArticles(data);
             setIsLoading(false);
         };
