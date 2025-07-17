@@ -429,8 +429,7 @@ const DashboardPage = ({ user, setPage, articles, fetchArticles, glossaryTerms, 
     
     const handleLogout = async () => {
         await supabase.auth.signOut();
-        // O listener onAuthStateChange no App.jsx irá tratar de atualizar o estado do usuário
-        setPage({ name: 'home' });
+        // O listener onAuthStateChange no App.jsx irá tratar de atualizar o estado do usuário e redirecionar
     };
     
     return (
