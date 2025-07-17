@@ -130,12 +130,10 @@ const HomePage = ({ setPage }) => {
             <section className="bg-black text-white text-center py-12">
                 <div className="container mx-auto px-6">
                     <img 
-                        src="https://placehold.co/1200x400/000000/39FF14?text=Variola+Virulenta" 
-                        alt="Banner do Variola Virulenta" 
+                        src="http://googleusercontent.com/file_content/5" 
+                        alt="Banner do Podcast Variola Virulenta" 
                         className="w-full h-auto object-cover mb-8"
                     />
-                    <h1 className="text-5xl font-extrabold mb-4 text-green-400 tracking-tight">Pensamento Crítico para Transformar a Realidade</h1>
-                    <p className="text-xl text-gray-300 max-w-3xl mx-auto">Debates sobre política, economia e história para além do senso comum.</p>
                 </div>
             </section>
             
@@ -532,7 +530,6 @@ const LoginPage = ({ setPage }) => {
     );
 };
 
-// ... (Restante do código, incluindo DashboardPage e seus subcomponentes, permanece o mesmo)
 const DashboardPage = ({ user, setPage }) => {
     const [currentView, setCurrentView] = useState('articles');
     
