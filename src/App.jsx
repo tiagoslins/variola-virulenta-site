@@ -174,7 +174,6 @@ const ArticleCard = ({ article, setPage }) => (
 );
 
 const SingleArticlePage = ({ article, setPage }) => {
-    // Defensive checks to prevent crashes
     if (!article) {
         return <div className="text-center py-20 text-white">Artigo não encontrado.</div>;
     }
@@ -500,7 +499,7 @@ const ArticleManager = ({ user, articles, fetchArticles }) => {
             content: formState.content,
             tags: formState.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
             coverImage: formState.coverImage,
-            author_id: user.id, // Salva o ID do autor
+            author_id: user.id,
         };
 
         if (editingArticle) {
