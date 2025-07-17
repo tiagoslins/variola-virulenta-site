@@ -125,10 +125,10 @@ const HomePage = ({ setPage, articles }) => {
                     <div className="lg:col-span-2">
                         <div className="cursor-pointer group" onClick={() => setPage({ name: 'singleArticle', data: featuredArticle })}>
                             {featuredArticle.coverImage && <img src={featuredArticle.coverImage} alt="" className="w-full h-auto object-cover mb-4"/>}
-                            <p className="text-green-500 font-bold text-sm uppercase">{featuredArticle.tags[0]}</p>
+                            <p className="text-green-500 font-bold text-sm uppercase">{featuredArticle.tags?.[0]}</p>
                             <h1 className="text-3xl md:text-5xl font-extrabold text-white my-2 group-hover:text-green-400 transition-colors">{featuredArticle.title}</h1>
                             <p className="text-gray-400 font-serif text-lg">{featuredArticle.content.substring(0, 150)}...</p>
-                            <p className="text-gray-500 text-sm mt-2">Por {featuredArticle.author}</p>
+                            <p className="text-gray-500 text-sm mt-2">Por {featuredArticle.profiles?.full_name || 'Autor Desconhecido'}</p>
                         </div>
                     </div>
                 )}
@@ -137,9 +137,9 @@ const HomePage = ({ setPage, articles }) => {
                     {secondaryArticles.map(article => (
                          <div key={article.id} className="cursor-pointer group" onClick={() => setPage({ name: 'singleArticle', data: article })}>
                              {article.coverImage && <img src={article.coverImage} alt="" className="w-full h-40 object-cover mb-2"/>}
-                             <p className="text-green-500 font-bold text-sm uppercase">{article.tags[0]}</p>
+                             <p className="text-green-500 font-bold text-sm uppercase">{article.tags?.[0]}</p>
                              <h2 className="text-xl font-bold text-white group-hover:text-green-400 transition-colors">{article.title}</h2>
-                             <p className="text-gray-500 text-sm mt-1">Por {article.author}</p>
+                             <p className="text-gray-500 text-sm mt-1">Por {article.profiles?.full_name || 'Autor Desconhecido'}</p>
                          </div>
                     ))}
                 </div>
@@ -166,21 +166,27 @@ const ArticleCard = ({ article, setPage }) => (
     <div className="bg-black flex flex-col overflow-hidden cursor-pointer group" onClick={() => setPage({ name: 'singleArticle', data: article })}>
         {article.coverImage && <img src={article.coverImage} alt={`Capa do artigo ${article.title}`} className="w-full h-48 object-cover"/>}
         <div className="p-1 pt-3 flex flex-col flex-grow">
-            <p className="text-green-500 font-bold text-xs uppercase">{article.tags[0]}</p>
+            <p className="text-green-500 font-bold text-xs uppercase">{article.tags?.[0]}</p>
             <h3 className="text-lg font-bold text-white mb-2 group-hover:text-green-400 transition-colors">{article.title}</h3>
-            <p className="text-gray-500 text-sm mt-auto">Por {article.author}</p>
+            <p className="text-gray-500 text-sm mt-auto">Por {article.profiles?.full_name || 'Autor Desconhecido'}</p>
         </div>
     </div>
 );
 
 const SingleArticlePage = ({ article, setPage }) => {
-    const formattedDate = new Date(article.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+    // Defensive checks to prevent crashes
+    if (!article) {
+        return <div className="text-center py-20 text-white">Artigo não encontrado.</div>;
+    }
+    const formattedDate = article.createdAt ? new Date(article.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) : 'Data indisponível';
+    const tags = Array.isArray(article.tags) ? article.tags : [];
+
     return (
         <div className="bg-black text-white py-12">
             <div className="container mx-auto px-6 max-w-4xl">
                 <button onClick={() => setPage({ name: 'articles' })} className="text-green-500 font-bold hover:underline mb-8">&larr; Voltar</button>
                 <div className="flex flex-wrap gap-2 mb-4">
-                    {article.tags.map(tag => (
+                    {tags.map(tag => (
                         <button key={tag} onClick={() => setPage({ name: 'tagPage', data: tag })} className="bg-gray-800 text-green-400 text-xs font-bold px-2 py-1 rounded-full hover:bg-green-500 hover:text-black">
                             {tag}
                         </button>
@@ -188,7 +194,7 @@ const SingleArticlePage = ({ article, setPage }) => {
                 </div>
                 <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-4 leading-tight">{article.title}</h1>
                 <div className="text-gray-500 font-semibold mb-8">
-                    <span>Por {article.author}</span>
+                    <span>Por {article.profiles?.full_name || 'Autor Desconhecido'}</span>
                     <span className="mx-2">|</span>
                     <span>{formattedDate}</span>
                 </div>
@@ -490,9 +496,11 @@ const ArticleManager = ({ user, articles, fetchArticles }) => {
         }
 
         const articleData = {
-            ...formState,
+            title: formState.title,
+            content: formState.content,
             tags: formState.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
-            author: user.email,
+            coverImage: formState.coverImage,
+            author_id: user.id, // Salva o ID do autor
         };
 
         if (editingArticle) {
@@ -807,7 +815,7 @@ export default function App() {
     const [isLoading, setIsLoading] = useState(true);
 
     const fetchArticles = async () => {
-        const { data, error } = await supabase.from('articles').select('*').order('createdAt', { ascending: false });
+        const { data, error } = await supabase.from('articles').select('*, profiles(full_name)').order('createdAt', { ascending: false });
         if (error) console.error('Erro ao buscar artigos:', error); else setArticles(data);
     };
 
@@ -826,12 +834,12 @@ export default function App() {
             setIsLoading(true);
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user) {
-                const { data: profile, error: profileError } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+                const { data: profile, error: profileError } = await supabase.from('profiles').select('role, full_name').eq('id', session.user.id).single();
                 if (profile) {
-                    setUserProfile({ ...session.user, role: profile.role });
+                    setUserProfile({ ...session.user, role: profile.role, full_name: profile.full_name });
                 } else {
                     console.error("Perfil não encontrado para o usuário, atribuindo papel padrão 'writer'.", profileError);
-                    setUserProfile({ ...session.user, role: 'writer' });
+                    setUserProfile({ ...session.user, role: 'writer', full_name: session.user.email });
                 }
             }
             await Promise.all([fetchArticles(), fetchGlossary(), fetchTeamMembers()]);
@@ -844,15 +852,18 @@ export default function App() {
             async (event, session) => {
                 const user = session?.user ?? null;
                 if (user) {
-                    const { data: profile, error: profileError } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+                    const { data: profile, error: profileError } = await supabase.from('profiles').select('role, full_name').eq('id', user.id).single();
                     if (profile) {
-                        setUserProfile({ ...user, role: profile.role });
+                        setUserProfile({ ...user, role: profile.role, full_name: profile.full_name });
                     } else {
                         console.error("Perfil não encontrado para o usuário:", user.id, profileError);
-                        setUserProfile({ ...user, role: 'writer' });
+                        setUserProfile({ ...user, role: 'writer', full_name: user.email });
                     }
                 } else {
                     setUserProfile(null);
+                }
+                if (event === 'SIGNED_OUT') {
+                    setPage({ name: 'home' });
                 }
             }
         );
@@ -896,7 +907,7 @@ export default function App() {
             case 'tagPage': return <TagPage tag={page.data} {...props} />;
             case 'search': return <SearchPage query={page.data} {...props} />;
             case 'login': return <LoginPage setPage={setPage} setUserProfile={setUserProfile} />;
-            case 'dashboard': return userProfile ? <DashboardPage user={userProfile} setUserProfile={setUserProfile} fetchArticles={fetchArticles} fetchGlossary={fetchGlossary} fetchTeamMembers={fetchTeamMembers} glossaryTerms={glossaryTerms} teamMembers={teamMembers} {...props} /> : <LoginPage setPage={setPage} setUserProfile={setUserProfile} />;
+            case 'dashboard': return userProfile ? <DashboardPage user={userProfile} setPage={setPage} fetchArticles={fetchArticles} fetchGlossary={fetchGlossary} fetchTeamMembers={fetchTeamMembers} glossaryTerms={glossaryTerms} teamMembers={teamMembers} {...props} /> : <LoginPage setPage={setPage} setUserProfile={setUserProfile} />;
             default: return <HomePage {...props} />;
         }
     };
