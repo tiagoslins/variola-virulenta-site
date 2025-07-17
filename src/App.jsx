@@ -6,7 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 // --- INÍCIO: CONFIGURAÇÃO DO SUPABASE ---
 // Chaves API e URL do seu projeto Supabase
 const supabaseUrl = 'https://roifevvmjncbzvugneni.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvaWZldnZtam5jYnp2dWduZW5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2ODU2MzUsImV4cCI6MjA2ODI2MTYzNX0.jti8SFCc4KVoFBWKlzzqzqwJILsAhJtQ1Xi48_S-TuA';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvaWZldnZtam5jYnp2dWduZW5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjExNzQ0MDAsImV4cCI6MjAzNjc1MDQwMH0.sfl2Trp9G9-O2K_2n4W24eS02D4I0w5p7yGR52e2g2E';
 // --- FIM DA CONFIGURAÇÃO ---
 
 // Inicialização do cliente Supabase
@@ -391,10 +391,8 @@ const LoginPage = ({ setPage, setUserProfile }) => {
                 .single();
             
             if (profileError) {
-                // Se o perfil não for encontrado, pode ser um erro de sincronização
-                // Vamos atribuir um papel padrão e continuar, mas registar o erro
                 console.error("Erro ao buscar perfil, mas o login foi bem-sucedido:", profileError);
-                setUserProfile({ ...user, role: 'writer' }); // Assume 'writer' como padrão
+                setUserProfile({ ...user, role: 'writer' });
             } else {
                 setUserProfile({ ...user, role: profile.role });
             }
@@ -496,7 +494,7 @@ const ArticleManager = ({ user, articles, fetchArticles }) => {
             const { error } = await supabase.from('articles').update(articleData).eq('id', editingArticle.id);
             if (error) setMessage(`Erro: ${error.message}`); else setMessage('Artigo atualizado!');
         } else {
-            const { error } = await supabase.from('articles').insert({ ...articleData, createdAt: new Date().toISOString() });
+            const { error } = await supabase.from('articles').insert(articleData);
             if (error) setMessage(`Erro: ${error.message}`); else setMessage('Artigo publicado!');
         }
         
@@ -836,8 +834,13 @@ export default function App() {
             async (event, session) => {
                 const user = session?.user ?? null;
                 if (user) {
-                    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-                    setUserProfile({ ...user, role: profile?.role || 'writer' });
+                    const { data: profile, error: profileError } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+                    if (profile) {
+                        setUserProfile({ ...user, role: profile.role });
+                    } else {
+                        console.error("Perfil não encontrado para o usuário:", user.id, profileError);
+                        setUserProfile({ ...user, role: 'writer' });
+                    }
                 } else {
                     setUserProfile(null);
                 }
