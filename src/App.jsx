@@ -2,80 +2,72 @@ import React, { useState, useEffect, createContext, useContext, useRef, useCallb
 import { HashRouter, Routes, Route, Link, NavLink, useNavigate, useParams, useLocation, Outlet, Navigate } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 
-// --- INÍCIO: CONFIGURAÇÃO E VERIFICAÇÃO DO SUPABASE ---
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
+// ############################################################################
+// 0. DIAGNÓSTICO E ERROR BOUNDARY
+// ############################################################################
+
 let supabase;
 let configError = null;
 
-// Verificação crucial para evitar a página em branco.
-if (!supabaseUrl || !supabaseKey) {
+try {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+        throw new Error("As variáveis de ambiente VITE_SUPABASE_URL ou VITE_SUPABASE_KEY não foram encontradas.");
+    }
+    supabase = createClient(supabaseUrl, supabaseKey);
+
+} catch (error) {
     configError = {
         title: "Erro Crítico de Configuração",
-        message: "As variáveis de ambiente do Supabase não foram encontradas.",
-        details: `Verifique se tem um ficheiro .env na raiz do seu projeto ou se as variáveis de ambiente estão configuradas no Netlify. O conteúdo esperado é:\n\nVITE_SUPABASE_URL=https://SUA_URL_DO_PROJETO.supabase.co\nVITE_SUPABASE_KEY=SUA_CHAVE_PUBLICA_ANON`,
-        action: "Depois de configurar, reinicie o servidor de desenvolvimento ou faça um novo deploy."
+        message: error.message,
+        details: `Verifique a secção "Environment variables" nas configurações do seu site no Netlify. Assegure-se de que as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_KEY existem e estão corretas.`,
+        action: "Após corrigir, acione um novo deploy no Netlify."
     };
-} else {
-    try {
-        supabase = createClient(supabaseUrl, supabaseKey);
-    } catch (error) {
-        configError = {
-            title: "Erro ao Inicializar o Supabase",
-            message: "Ocorreu um erro ao tentar conectar-se ao Supabase, verifique se a URL e a Chave estão corretas.",
-            details: error.message,
-            action: "Corrija as variáveis de ambiente e faça um novo deploy."
-        };
-    }
 }
 
-// ############################################################################
-// 0. COMPONENTE DE ERRO E ERROR BOUNDARY
-// ############################################################################
-
 const ErrorDisplay = ({ error }) => (
-    <div style={{ fontFamily: 'monospace', padding: '2rem', backgroundColor: '#1a202c', color: '#e53e3e', minHeight: '100vh' }}>
-        <h1>{error.title}</h1>
-        <p>{error.message}</p>
-        <pre style={{ backgroundColor: '#2d3748', padding: '1rem', marginTop: '1rem', borderRadius: '8px', color: 'white', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+    <div style={{ fontFamily: 'monospace', padding: '2rem', backgroundColor: '#1a202c', color: '#e53e3e', minHeight: '100vh', boxSizing: 'border-box' }}>
+        <h1 style={{ borderBottom: '2px solid #e53e3e', paddingBottom: '1rem' }}>{error.title}</h1>
+        <p style={{ fontSize: '1.1rem' }}>{error.message}</p>
+        <pre style={{ backgroundColor: '#2d3748', padding: '1rem', marginTop: '1rem', borderRadius: '8px', color: 'white', whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontSize: '0.9rem' }}>
             {error.details}
         </pre>
-        <p style={{ marginTop: '1rem', color: '#90cdf4' }}>{error.action}</p>
+        <p style={{ marginTop: '1rem', color: '#90cdf4' }}><strong>Ação Sugerida:</strong> {error.action}</p>
     </div>
 );
 
 class ErrorBoundary extends React.Component {
     constructor(props) {
         super(props);
-        this.state = { hasError: false, error: null };
+        this.state = { hasError: false, error: null, errorInfo: null };
     }
     static getDerivedStateFromError(error) {
         return { hasError: true, error: error };
     }
     componentDidCatch(error, errorInfo) {
+        this.setState({ error: error, errorInfo: errorInfo });
         console.error("Uncaught error:", error, errorInfo);
     }
     render() {
         if (this.state.hasError) {
-            return <ErrorDisplay error={{ title: "Erro Inesperado na Aplicação", message: "Algo quebrou durante a renderização.", details: this.state.error.toString(), action: "Verifique a consola do programador (F12) para mais detalhes e reporte o erro." }} />;
+            return <ErrorDisplay error={{ title: "Erro Inesperado na Aplicação", message: "Algo quebrou durante a renderização.", details: this.state.error?.toString() + "\n\n" + this.state.errorInfo?.componentStack, action: "Verifique a consola do programador (F12) para mais detalhes e reporte o erro." }} />;
         }
         return this.props.children;
     }
 }
 
-
 // ############################################################################
-// 1. CONTEXTOS GLOBAIS (Autenticação e Player de Áudio)
+// 1. CONTEXTOS GLOBAIS
 // ############################################################################
 
 const AuthContext = createContext(null);
-
-export const AuthProvider = ({ children }) => {
+const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
-
     useEffect(() => {
-        if (!supabase) { setLoading(false); return; } // Não faz nada se o supabase não foi inicializado
+        if (!supabase) { setLoading(false); return; }
         const fetchUserSession = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user) {
@@ -97,13 +89,11 @@ export const AuthProvider = ({ children }) => {
         });
         return () => authListener?.subscription.unsubscribe();
     }, []);
-
     return <AuthContext.Provider value={{ user, loading, signOut: () => supabase.auth.signOut() }}>{children}</AuthContext.Provider>;
 };
 
 const PlayerContext = createContext(null);
-
-export const PlayerProvider = ({ children }) => {
+const PlayerProvider = ({ children }) => {
     const [currentTrack, setCurrentTrack] = useState(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const playTrack = (track) => { setCurrentTrack(track); setIsPlaying(true); };
@@ -116,8 +106,8 @@ export const PlayerProvider = ({ children }) => {
 // 2. HOOKS PERSONALIZADOS
 // ############################################################################
 
-export const useAuth = () => useContext(AuthContext);
-export const usePlayer = () => useContext(PlayerContext);
+const useAuth = () => useContext(AuthContext);
+const usePlayer = () => useContext(PlayerContext);
 
 // ############################################################################
 // 3. COMPONENTES REUTILIZÁVEIS
@@ -473,36 +463,42 @@ const UserManager = ({ user }) => {
 // 6. COMPONENTE PRINCIPAL DA APLICAÇÃO (App)
 // ############################################################################
 
-function App() {
+function AppContent() {
     // Se houver um erro de configuração, renderiza apenas a mensagem de erro.
     if (configError) {
         return <ErrorDisplay error={configError} />;
     }
 
     return (
+        <AuthProvider>
+            <PlayerProvider>
+                <HashRouter>
+                    <Routes>
+                        <Route path="/" element={<MainLayout />}>
+                            <Route index element={<HomePage />} />
+                            <Route path="articles" element={<ArticlesPage />} />
+                            <Route path="article/:id" element={<SingleArticlePage />} />
+                            <Route path="episodes" element={<EpisodesPage />} />
+                            <Route path="glossary" element={<GlossaryPage />} />
+                            <Route path="team" element={<TeamPage />} />
+                            <Route path="bio/:id" element={<BioPage />} />
+                            <Route path="tag/:tag" element={<TagPage />} />
+                            <Route path="search/:query" element={<SearchPage />} />
+                            <Route path="login" element={<LoginPage />} />
+                            <Route path="dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+                            <Route path="*" element={<NotFoundPage />} />
+                        </Route>
+                    </Routes>
+                </HashRouter>
+            </PlayerProvider>
+        </AuthProvider>
+    );
+}
+
+export default function App() {
+    return (
         <ErrorBoundary>
-            <AuthProvider>
-                <PlayerProvider>
-                    <HashRouter>
-                        <Routes>
-                            <Route path="/" element={<MainLayout />}>
-                                <Route index element={<HomePage />} />
-                                <Route path="articles" element={<ArticlesPage />} />
-                                <Route path="article/:id" element={<SingleArticlePage />} />
-                                <Route path="episodes" element={<EpisodesPage />} />
-                                <Route path="glossary" element={<GlossaryPage />} />
-                                <Route path="team" element={<TeamPage />} />
-                                <Route path="bio/:id" element={<BioPage />} />
-                                <Route path="tag/:tag" element={<TagPage />} />
-                                <Route path="search/:query" element={<SearchPage />} />
-                                <Route path="login" element={<LoginPage />} />
-                                <Route path="dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-                                <Route path="*" element={<NotFoundPage />} />
-                            </Route>
-                        </Routes>
-                    </HashRouter>
-                </PlayerProvider>
-            </AuthProvider>
+            <AppContent />
         </ErrorBoundary>
     );
 }
