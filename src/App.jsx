@@ -124,7 +124,7 @@ const HomePage = ({ setPage, articles }) => {
                 {featuredArticle && (
                     <div className="lg:col-span-2">
                         <div className="cursor-pointer group" onClick={() => setPage({ name: 'singleArticle', data: featuredArticle })}>
-                            <img src={featuredArticle.coverImage} alt="" className="w-full h-auto object-cover mb-4"/>
+                            {featuredArticle.coverImage && <img src={featuredArticle.coverImage} alt="" className="w-full h-auto object-cover mb-4"/>}
                             <p className="text-green-500 font-bold text-sm uppercase">{featuredArticle.tags[0]}</p>
                             <h1 className="text-3xl md:text-5xl font-extrabold text-white my-2 group-hover:text-green-400 transition-colors">{featuredArticle.title}</h1>
                             <p className="text-gray-400 font-serif text-lg">{featuredArticle.content.substring(0, 150)}...</p>
@@ -136,7 +136,7 @@ const HomePage = ({ setPage, articles }) => {
                 <div className="space-y-8">
                     {secondaryArticles.map(article => (
                          <div key={article.id} className="cursor-pointer group" onClick={() => setPage({ name: 'singleArticle', data: article })}>
-                             <img src={article.coverImage} alt="" className="w-full h-40 object-cover mb-2"/>
+                             {article.coverImage && <img src={article.coverImage} alt="" className="w-full h-40 object-cover mb-2"/>}
                              <p className="text-green-500 font-bold text-sm uppercase">{article.tags[0]}</p>
                              <h2 className="text-xl font-bold text-white group-hover:text-green-400 transition-colors">{article.title}</h2>
                              <p className="text-gray-500 text-sm mt-1">Por {article.author}</p>
@@ -164,7 +164,7 @@ const ArticlesSection = ({ title, articles, setPage }) => (
 
 const ArticleCard = ({ article, setPage }) => (
     <div className="bg-black flex flex-col overflow-hidden cursor-pointer group" onClick={() => setPage({ name: 'singleArticle', data: article })}>
-        <img src={article.coverImage} alt={`Capa do artigo ${article.title}`} className="w-full h-48 object-cover"/>
+        {article.coverImage && <img src={article.coverImage} alt={`Capa do artigo ${article.title}`} className="w-full h-48 object-cover"/>}
         <div className="p-1 pt-3 flex flex-col flex-grow">
             <p className="text-green-500 font-bold text-xs uppercase">{article.tags[0]}</p>
             <h3 className="text-lg font-bold text-white mb-2 group-hover:text-green-400 transition-colors">{article.title}</h3>
@@ -192,7 +192,7 @@ const SingleArticlePage = ({ article, setPage }) => {
                     <span className="mx-2">|</span>
                     <span>{formattedDate}</span>
                 </div>
-                <img src={article.coverImage} alt={`Capa do artigo ${article.title}`} className="w-full h-auto object-cover mb-8"/>
+                {article.coverImage && <img src={article.coverImage} alt={`Capa do artigo ${article.title}`} className="w-full h-auto object-cover mb-8"/>}
                 <div className="prose prose-lg prose-invert max-w-none font-serif text-gray-300 leading-relaxed">
                     {article.content}
                 </div>
@@ -821,8 +821,13 @@ export default function App() {
             setIsLoading(true);
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user) {
-                const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
-                setUserProfile({ ...session.user, role: profile?.role || 'writer' });
+                const { data: profile, error: profileError } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+                if (profile) {
+                    setUserProfile({ ...session.user, role: profile.role });
+                } else {
+                    console.error("Perfil não encontrado para o usuário, atribuindo papel padrão 'writer'.", profileError);
+                    setUserProfile({ ...session.user, role: 'writer' });
+                }
             }
             await Promise.all([fetchArticles(), fetchGlossary(), fetchTeamMembers()]);
             setIsLoading(false);
