@@ -128,7 +128,7 @@ const HomePage = ({ setPage, articles }) => {
                             <p className="text-green-500 font-bold text-sm uppercase">{featuredArticle.tags?.[0]}</p>
                             <h1 className="text-3xl md:text-5xl font-extrabold text-white my-2 group-hover:text-green-400 transition-colors">{featuredArticle.title}</h1>
                             <p className="text-gray-400 font-serif text-lg">{featuredArticle.content.substring(0, 150)}...</p>
-                            <p className="text-gray-500 text-sm mt-2">Por {featuredArticle.profiles?.full_name || 'Autor Desconhecido'}</p>
+                            <p className="text-gray-500 text-sm mt-2">Por {featuredArticle.author_name || 'Autor Desconhecido'}</p>
                         </div>
                     </div>
                 )}
@@ -139,7 +139,7 @@ const HomePage = ({ setPage, articles }) => {
                              {article.coverImage && <img src={article.coverImage} alt="" className="w-full h-40 object-cover mb-2"/>}
                              <p className="text-green-500 font-bold text-sm uppercase">{article.tags?.[0]}</p>
                              <h2 className="text-xl font-bold text-white group-hover:text-green-400 transition-colors">{article.title}</h2>
-                             <p className="text-gray-500 text-sm mt-1">Por {article.profiles?.full_name || 'Autor Desconhecido'}</p>
+                             <p className="text-gray-500 text-sm mt-1">Por {article.author_name || 'Autor Desconhecido'}</p>
                          </div>
                     ))}
                 </div>
@@ -168,7 +168,7 @@ const ArticleCard = ({ article, setPage }) => (
         <div className="p-1 pt-3 flex flex-col flex-grow">
             <p className="text-green-500 font-bold text-xs uppercase">{article.tags?.[0]}</p>
             <h3 className="text-lg font-bold text-white mb-2 group-hover:text-green-400 transition-colors">{article.title}</h3>
-            <p className="text-gray-500 text-sm mt-auto">Por {article.profiles?.full_name || 'Autor Desconhecido'}</p>
+            <p className="text-gray-500 text-sm mt-auto">Por {article.author_name || 'Autor Desconhecido'}</p>
         </div>
     </div>
 );
@@ -193,7 +193,7 @@ const SingleArticlePage = ({ article, setPage }) => {
                 </div>
                 <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-4 leading-tight">{article.title}</h1>
                 <div className="text-gray-500 font-semibold mb-8">
-                    <span>Por {article.profiles?.full_name || 'Autor Desconhecido'}</span>
+                    <span>Por {article.author_name || 'Autor Desconhecido'}</span>
                     <span className="mx-2">|</span>
                     <span>{formattedDate}</span>
                 </div>
@@ -391,15 +391,15 @@ const LoginPage = ({ setPage, setUserProfile }) => {
             
             const { data: profile, error: profileError } = await supabase
                 .from('profiles')
-                .select('role')
+                .select('role, full_name')
                 .eq('id', user.id)
                 .single();
             
             if (profileError) {
                 console.error("Erro ao buscar perfil, mas o login foi bem-sucedido:", profileError);
-                setUserProfile({ ...user, role: 'writer' });
+                setUserProfile({ ...user, role: 'writer', full_name: user.email });
             } else {
-                setUserProfile({ ...user, role: profile.role });
+                setUserProfile({ ...user, role: profile.role, full_name: profile.full_name });
             }
             
             setPage({ name: 'dashboard' });
@@ -434,7 +434,6 @@ const DashboardPage = ({ user, setPage, articles, fetchArticles, glossaryTerms, 
     
     const handleLogout = async () => {
         await supabase.auth.signOut();
-        // O listener onAuthStateChange no App.jsx irá tratar de atualizar o estado do usuário e redirecionar
     };
     
     return (
@@ -466,7 +465,7 @@ const DashboardPage = ({ user, setPage, articles, fetchArticles, glossaryTerms, 
 
 const ArticleManager = ({ user, articles, fetchArticles }) => {
     const [editingArticle, setEditingArticle] = useState(null);
-    const [formState, setFormState] = useState({ title: '', content: '', tags: '', coverImage: '' });
+    const [formState, setFormState] = useState({ title: '', content: '', tags: '', coverImage: '', author_name: '' });
     const [message, setMessage] = useState('');
 
     useEffect(() => {
@@ -475,12 +474,13 @@ const ArticleManager = ({ user, articles, fetchArticles }) => {
                 title: editingArticle.title,
                 content: editingArticle.content,
                 tags: editingArticle.tags.join(', '),
-                coverImage: editingArticle.coverImage || ''
+                coverImage: editingArticle.coverImage || '',
+                author_name: editingArticle.author_name || ''
             });
         } else {
-            setFormState({ title: '', content: '', tags: '', coverImage: '' });
+            setFormState({ title: '', content: '', tags: '', coverImage: '', author_name: user.full_name || user.email });
         }
-    }, [editingArticle]);
+    }, [editingArticle, user]);
     
     const handleFormChange = (e) => {
         const { name, value } = e.target;
@@ -489,8 +489,8 @@ const ArticleManager = ({ user, articles, fetchArticles }) => {
 
     const handleFormSubmit = async (e) => {
         e.preventDefault();
-        if (!formState.title || !formState.content) {
-            setMessage('Título e conteúdo são obrigatórios.');
+        if (!formState.title || !formState.content || !formState.author_name) {
+            setMessage('Título, conteúdo e nome do autor são obrigatórios.');
             return;
         }
 
@@ -499,7 +499,7 @@ const ArticleManager = ({ user, articles, fetchArticles }) => {
             content: formState.content,
             tags: formState.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
             coverImage: formState.coverImage,
-            author_id: user.id,
+            author_name: formState.author_name,
         };
 
         if (editingArticle) {
@@ -533,13 +533,17 @@ const ArticleManager = ({ user, articles, fetchArticles }) => {
                             <input name="title" value={formState.title} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" />
                         </div>
                         <div>
+                            <label className="block text-gray-300 mb-2">Nome do Autor (obrigatório)</label>
+                            <input name="author_name" value={formState.author_name} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" />
+                        </div>
+                        <div>
                             <label className="block text-gray-300 mb-2">URL da Imagem de Capa</label>
                             <input name="coverImage" value={formState.coverImage} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" />
                         </div>
-                    </div>
-                    <div className="mt-6">
-                        <label className="block text-gray-300 mb-2">Tags (separadas por vírgula)</label>
-                        <input name="tags" value={formState.tags} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" />
+                        <div>
+                            <label className="block text-gray-300 mb-2">Tags (separadas por vírgula)</label>
+                            <input name="tags" value={formState.tags} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" />
+                        </div>
                     </div>
                     <div className="mt-6">
                         <label className="block text-gray-300 mb-2">Conteúdo</label>
@@ -814,7 +818,7 @@ export default function App() {
     const [isLoading, setIsLoading] = useState(true);
 
     const fetchArticles = async () => {
-        const { data, error } = await supabase.from('articles').select('*, profiles(full_name)').order('createdAt', { ascending: false });
+        const { data, error } = await supabase.from('articles').select('*').order('createdAt', { ascending: false });
         if (error) console.error('Erro ao buscar artigos:', error); else setArticles(data);
     };
 
