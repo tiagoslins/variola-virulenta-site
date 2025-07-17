@@ -467,6 +467,7 @@ const ArticleManager = ({ user, articles, fetchArticles }) => {
     const [editingArticle, setEditingArticle] = useState(null);
     const [formState, setFormState] = useState({ title: '', content: '', tags: '', coverImage: '', author_name: '' });
     const [message, setMessage] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         if (editingArticle) {
@@ -491,8 +492,12 @@ const ArticleManager = ({ user, articles, fetchArticles }) => {
         e.preventDefault();
         if (!formState.title || !formState.content || !formState.author_name) {
             setMessage('Título, conteúdo e nome do autor são obrigatórios.');
+            setTimeout(() => setMessage(''), 4000);
             return;
         }
+
+        setIsSubmitting(true);
+        setMessage('');
 
         const articleData = {
             title: formState.title,
@@ -512,6 +517,7 @@ const ArticleManager = ({ user, articles, fetchArticles }) => {
         
         await fetchArticles();
         setEditingArticle(null);
+        setIsSubmitting(false);
         setTimeout(() => setMessage(''), 3000);
     };
 
@@ -557,7 +563,9 @@ const ArticleManager = ({ user, articles, fetchArticles }) => {
                     </div>
                     {message && <p className="text-green-500 text-center my-4">{message}</p>}
                     <div className="flex items-center gap-4 mt-6">
-                        <button type="submit" className="bg-green-500 text-black font-bold py-3 px-8 rounded-md hover:bg-green-400">{editingArticle ? 'Atualizar' : 'Publicar'}</button>
+                        <button type="submit" disabled={isSubmitting} className="bg-green-500 text-black font-bold py-3 px-8 rounded-md hover:bg-green-400 disabled:bg-gray-500">
+                            {isSubmitting ? 'Publicando...' : (editingArticle ? 'Atualizar' : 'Publicar')}
+                        </button>
                         {editingArticle && <button type="button" onClick={() => setEditingArticle(null)} className="bg-gray-600 text-white font-bold py-3 px-8 rounded-md hover:bg-gray-500">Cancelar</button>}
                     </div>
                 </form>
