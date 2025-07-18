@@ -324,24 +324,7 @@ const EpisodesPage = () => {
     );
 };
 
-const GlossaryPage = () => {
-    const [glossaryTerms, setGlossaryTerms] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchGlossary = async () => {
-            setIsLoading(true);
-            const { data, error } = await supabase.from('glossary').select('*').order('term', { ascending: true });
-            if (error) console.error('Erro ao buscar glossário:', error); else setGlossaryTerms(data);
-            setIsLoading(false);
-        };
-        fetchGlossary();
-    }, []);
-
-    if (isLoading) {
-        return <div className="text-center py-10 text-white">Carregando glossário...</div>;
-    }
-
+const GlossaryPage = ({ glossaryTerms }) => {
     return (
         <div className="bg-black py-12">
             <div className="container mx-auto px-6 max-w-4xl">
@@ -418,24 +401,7 @@ const SearchPage = ({ query }) => {
     );
 };
 
-const TeamPage = () => {
-    const [teamMembers, setTeamMembers] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchTeam = async () => {
-            setIsLoading(true);
-            const { data, error } = await supabase.from('team_members').select('*').order('display_order', { ascending: true });
-            if (error) console.error('Erro ao buscar equipa:', error); else setTeamMembers(data);
-            setIsLoading(false);
-        };
-        fetchTeam();
-    }, []);
-
-    if (isLoading) {
-        return <div className="text-center py-10 text-white">Carregando equipa...</div>;
-    }
-
+const TeamPage = ({ teamMembers }) => {
     return (
         <div className="bg-black py-12">
             <div className="container mx-auto px-6">
@@ -539,7 +505,7 @@ const LoginPage = () => {
     );
 };
 
-const DashboardPage = ({ user }) => {
+const DashboardPage = ({ user, articles, fetchArticles, glossaryTerms, fetchGlossary, teamMembers, fetchTeamMembers }) => {
     const [currentView, setCurrentView] = useState('articles');
     
     const handleLogout = async () => {
@@ -564,30 +530,20 @@ const DashboardPage = ({ user }) => {
                     )}
                 </div>
                 
-                {currentView === 'articles' && <ArticleManager user={user} />}
-                {currentView === 'team' && <TeamManager />}
-                {currentView === 'glossary' && <GlossaryManager />}
+                {currentView === 'articles' && <ArticleManager user={user} articles={articles} fetchArticles={fetchArticles} />}
+                {currentView === 'team' && <TeamManager teamMembers={teamMembers} fetchTeamMembers={fetchTeamMembers} />}
+                {currentView === 'glossary' && <GlossaryManager glossaryTerms={glossaryTerms} fetchGlossary={fetchGlossary} />}
                 {currentView === 'users' && <UserManager user={user} />}
             </div>
         </div>
     );
 };
 
-const ArticleManager = ({ user }) => {
-    const [articles, setArticles] = useState([]);
+const ArticleManager = ({ user, articles, fetchArticles }) => {
     const [editingArticle, setEditingArticle] = useState(null);
     const [formState, setFormState] = useState({ title: '', content: '', tags: '', coverImage: '', author_name: '' });
     const [message, setMessage] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-
-    const fetchArticles = async () => {
-        const { data, error } = await supabase.from('articles').select('*').order('createdAt', { ascending: false });
-        if (error) console.error('Erro ao buscar artigos:', error); else setArticles(data);
-    };
-
-    useEffect(() => {
-        fetchArticles();
-    }, []);
 
     useEffect(() => {
         if (editingArticle) {
@@ -708,20 +664,10 @@ const ArticleManager = ({ user }) => {
     );
 };
 
-const GlossaryManager = () => {
-    const [glossaryTerms, setGlossaryTerms] = useState([]);
+const GlossaryManager = ({ glossaryTerms, fetchGlossary }) => {
     const [editingTerm, setEditingTerm] = useState(null);
     const [formState, setFormState] = useState({ term: '', definition: '' });
     const [message, setMessage] = useState('');
-
-    const fetchGlossary = async () => {
-        const { data, error } = await supabase.from('glossary').select('*').order('term', { ascending: true });
-        if (error) console.error('Erro ao buscar glossário:', error); else setGlossaryTerms(data);
-    };
-
-    useEffect(() => {
-        fetchGlossary();
-    }, []);
 
     useEffect(() => {
         if (editingTerm) {
@@ -801,20 +747,10 @@ const GlossaryManager = () => {
     );
 };
 
-const TeamManager = () => {
-    const [teamMembers, setTeamMembers] = useState([]);
+const TeamManager = ({ teamMembers, fetchTeamMembers }) => {
     const [editingMember, setEditingMember] = useState(null);
     const [formState, setFormState] = useState({ name: '', role: '', photo: '', bio: '', display_order: 99 });
     const [message, setMessage] = useState('');
-
-    const fetchTeamMembers = async () => {
-        const { data, error } = await supabase.from('team_members').select('*').order('display_order', { ascending: true });
-        if (error) console.error('Erro ao buscar membros da equipe:', error); else setTeamMembers(data);
-    };
-
-    useEffect(() => {
-        fetchTeamMembers();
-    }, []);
 
     useEffect(() => {
         if (editingMember) {
@@ -958,12 +894,30 @@ const UserManager = ({ user }) => {
 export default function App() {
     const [page, setPage] = useState({ name: 'home', data: null });
     const [userProfile, setUserProfile] = useState(null);
+    const [articles, setArticles] = useState([]);
+    const [glossaryTerms, setGlossaryTerms] = useState([]);
+    const [teamMembers, setTeamMembers] = useState([]);
     const [currentTrack, setCurrentTrack] = useState(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
+    const fetchAllData = async () => {
+        setIsLoading(true);
+        const articlesPromise = supabase.from('articles').select('*, profiles(full_name)').order('createdAt', { ascending: false });
+        const glossaryPromise = supabase.from('glossary').select('*').order('term', { ascending: true });
+        const teamPromise = supabase.from('team_members').select('*').order('display_order', { ascending: true });
+
+        const [articlesResult, glossaryResult, teamResult] = await Promise.all([articlesPromise, glossaryPromise, teamPromise]);
+        
+        if(articlesResult.error) console.error('Erro ao buscar artigos:', articlesResult.error); else setArticles(articlesResult.data);
+        if(glossaryResult.error) console.error('Erro ao buscar glossário:', glossaryResult.error); else setGlossaryTerms(glossaryResult.data);
+        if(teamResult.error) console.error('Erro ao buscar membros da equipe:', teamResult.error); else setTeamMembers(teamResult.data);
+        
+        setIsLoading(false);
+    };
+
     useEffect(() => {
-        const checkUser = async () => {
+        const checkUserAndLoadData = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user) {
                 const { data: profile, error: profileError } = await supabase.from('profiles').select('role, full_name').eq('id', session.user.id).single();
@@ -974,10 +928,10 @@ export default function App() {
                     setUserProfile({ ...session.user, role: 'writer', full_name: session.user.email });
                 }
             }
-            setIsLoading(false);
+            await fetchAllData();
         };
         
-        checkUser();
+        checkUserAndLoadData();
 
         const { data: authListener } = supabase.auth.onAuthStateChange(
             async (event, session) => {
@@ -1037,18 +991,18 @@ export default function App() {
         }
         
         switch (page.name) {
-            case 'home': return <HomePage />;
-            case 'articles': return <ArticlesPage />;
+            case 'home': return <HomePage articles={articles} />;
+            case 'articles': return <ArticlesPage articles={articles} />;
             case 'article': return <SingleArticlePage articleId={page.data} />;
             case 'episodes': return <EpisodesPage onPlay={handlePlay} />;
-            case 'glossary': return <GlossaryPage />;
-            case 'team': return <TeamPage />;
+            case 'glossary': return <GlossaryPage glossaryTerms={glossaryTerms} />;
+            case 'team': return <TeamPage teamMembers={teamMembers} />;
             case 'bio': return <BioPage memberId={page.data} />;
-            case 'tag': return <TagPage tag={page.data} />;
-            case 'search': return <SearchPage query={page.data} />;
+            case 'tag': return <TagPage tag={page.data} articles={articles} />;
+            case 'search': return <SearchPage query={page.data} articles={articles} />;
             case 'login': return <LoginPage />;
-            case 'dashboard': return userProfile ? <DashboardPage user={userProfile} /> : <LoginPage />;
-            default: return <HomePage />;
+            case 'dashboard': return userProfile ? <DashboardPage user={userProfile} articles={articles} fetchArticles={fetchAllData} glossaryTerms={glossaryTerms} fetchGlossary={fetchAllData} teamMembers={teamMembers} fetchTeamMembers={fetchAllData} /> : <LoginPage />;
+            default: return <HomePage articles={articles} />;
         }
     };
 
@@ -1063,4 +1017,4 @@ export default function App() {
             <Footer />
         </div>
     );
-} 
+}
