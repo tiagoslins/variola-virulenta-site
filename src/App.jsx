@@ -101,32 +101,7 @@ const PersistentAudioPlayer = ({ track, isPlaying, onPlayPause, onEnded }) => {
 
 // --- PÁGINAS ---
 
-const HomePage = () => {
-    const [articles, setArticles] = useState([]);
-    const [bannerUrl, setBannerUrl] = useState('');
-    const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchHomePageData = async () => {
-            setIsLoading(true);
-            
-            const articlesPromise = supabase.from('articles').select('*, profiles(full_name)').order('createdAt', { ascending: false }).limit(6);
-            const bannerPromise = supabase.from('site_settings').select('value').eq('key', 'main_banner_url').single();
-
-            const [articlesResult, bannerResult] = await Promise.all([articlesPromise, bannerPromise]);
-            
-            if (articlesResult.error) console.error('Erro ao buscar artigos:', articlesResult.error); else setArticles(articlesResult.data);
-            if (bannerResult.error) console.error('Erro ao buscar banner:', bannerResult.error); else setBannerUrl(bannerResult.data?.value || '/images/variola_banner.jpg.jpg');
-
-            setIsLoading(false);
-        };
-        fetchHomePageData();
-    }, []);
-
-    if (isLoading) {
-        return <div className="text-center py-10 text-white">Carregando...</div>;
-    }
-    
+const HomePage = ({ articles, bannerUrl }) => {
     const featuredArticle = articles[0];
     const secondaryArticles = articles.slice(1, 3);
     const moreArticles = articles.slice(3);
@@ -183,24 +158,7 @@ const HomePage = () => {
     );
 };
 
-const ArticlesPage = () => {
-    const [articles, setArticles] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchAllArticles = async () => {
-            setIsLoading(true);
-            const { data, error } = await supabase.from('articles').select('*, profiles(full_name)').order('createdAt', { ascending: false });
-            if (error) console.error('Erro ao buscar todos os artigos:', error); else setArticles(data);
-            setIsLoading(false);
-        };
-        fetchAllArticles();
-    }, []);
-
-    if (isLoading) {
-        return <div className="text-center py-10 text-white">Carregando artigos...</div>;
-    }
-    
+const ArticlesPage = ({ articles }) => {
     return <ArticlesSection title="Todos os Artigos" articles={articles} />;
 };
 
