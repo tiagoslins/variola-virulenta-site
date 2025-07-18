@@ -897,27 +897,28 @@ export default function App() {
     const [articles, setArticles] = useState([]);
     const [glossaryTerms, setGlossaryTerms] = useState([]);
     const [teamMembers, setTeamMembers] = useState([]);
+    const [bannerUrl, setBannerUrl] = useState('');
     const [currentTrack, setCurrentTrack] = useState(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
     const fetchAllData = async () => {
-        setIsLoading(true);
-        const articlesPromise = supabase.from('articles').select('*, profiles(full_name)').order('createdAt', { ascending: false });
+        const articlesPromise = supabase.from('articles').select('*').order('createdAt', { ascending: false });
         const glossaryPromise = supabase.from('glossary').select('*').order('term', { ascending: true });
         const teamPromise = supabase.from('team_members').select('*').order('display_order', { ascending: true });
+        const bannerPromise = supabase.from('site_settings').select('value').eq('key', 'main_banner_url').single();
 
-        const [articlesResult, glossaryResult, teamResult] = await Promise.all([articlesPromise, glossaryPromise, teamPromise]);
+        const [articlesResult, glossaryResult, teamResult, bannerResult] = await Promise.all([articlesPromise, glossaryPromise, teamPromise, bannerPromise]);
         
         if(articlesResult.error) console.error('Erro ao buscar artigos:', articlesResult.error); else setArticles(articlesResult.data);
         if(glossaryResult.error) console.error('Erro ao buscar glossário:', glossaryResult.error); else setGlossaryTerms(glossaryResult.data);
         if(teamResult.error) console.error('Erro ao buscar membros da equipe:', teamResult.error); else setTeamMembers(teamResult.data);
-        
-        setIsLoading(false);
+        if (bannerResult.error) console.error('Erro ao buscar banner:', bannerResult.error); else setBannerUrl(bannerResult.data?.value || '/images/variola_banner.jpg.jpg');
     };
 
     useEffect(() => {
-        const checkUserAndLoadData = async () => {
+        const initializeApp = async () => {
+            setIsLoading(true);
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user) {
                 const { data: profile, error: profileError } = await supabase.from('profiles').select('role, full_name').eq('id', session.user.id).single();
@@ -929,9 +930,10 @@ export default function App() {
                 }
             }
             await fetchAllData();
+            setIsLoading(false);
         };
         
-        checkUserAndLoadData();
+        initializeApp();
 
         const { data: authListener } = supabase.auth.onAuthStateChange(
             async (event, session) => {
@@ -991,7 +993,7 @@ export default function App() {
         }
         
         switch (page.name) {
-            case 'home': return <HomePage articles={articles} />;
+            case 'home': return <HomePage articles={articles} bannerUrl={bannerUrl} />;
             case 'articles': return <ArticlesPage articles={articles} />;
             case 'article': return <SingleArticlePage articleId={page.data} />;
             case 'episodes': return <EpisodesPage onPlay={handlePlay} />;
@@ -1002,7 +1004,7 @@ export default function App() {
             case 'search': return <SearchPage query={page.data} articles={articles} />;
             case 'login': return <LoginPage />;
             case 'dashboard': return userProfile ? <DashboardPage user={userProfile} articles={articles} fetchArticles={fetchAllData} glossaryTerms={glossaryTerms} fetchGlossary={fetchAllData} teamMembers={teamMembers} fetchTeamMembers={fetchAllData} /> : <LoginPage />;
-            default: return <HomePage articles={articles} />;
+            default: return <HomePage articles={articles} bannerUrl={bannerUrl} />;
         }
     };
 
