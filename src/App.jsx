@@ -544,6 +544,7 @@ const ArticleManager = ({ user, articles, fetchArticles }) => {
     const [formState, setFormState] = useState({ title: '', content: '', tags: '', coverImage: '', author_name: '' });
     const [message, setMessage] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const contentRef = useRef(null);
 
     useEffect(() => {
         if (editingArticle) {
@@ -603,6 +604,46 @@ const ArticleManager = ({ user, articles, fetchArticles }) => {
             await fetchArticles();
         }
     };
+    
+    const applyFormat = (format) => {
+        const textarea = contentRef.current;
+        if (!textarea) return;
+        
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const selectedText = formState.content.substring(start, end);
+        let newText;
+
+        switch(format) {
+            case 'bold':
+                newText = `**${selectedText}**`;
+                break;
+            case 'italic':
+                newText = `*${selectedText}*`;
+                break;
+            case 'link':
+                const url = prompt("Insira a URL do link:");
+                if (url) {
+                    newText = `[${selectedText}](${url})`;
+                } else {
+                    return;
+                }
+                break;
+            case 'list':
+                const items = selectedText.split('\n').map(item => `- ${item}`).join('\n');
+                newText = items;
+                break;
+            default:
+                return;
+        }
+        
+        setFormState(prev => ({
+            ...prev,
+            content: prev.content.substring(0, start) + newText + prev.content.substring(end)
+        }));
+
+        setTimeout(() => textarea.focus(), 0);
+    };
 
     return (
         <>
@@ -629,8 +670,14 @@ const ArticleManager = ({ user, articles, fetchArticles }) => {
                     </div>
                     <div className="mt-6">
                         <label className="block text-gray-300 mb-2">Conteúdo</label>
+                        <div className="flex gap-2 mb-2 p-2 bg-gray-800 rounded-md">
+                            <button type="button" onClick={() => applyFormat('bold')} className="px-3 py-1 bg-gray-700 rounded-md font-bold">B</button>
+                            <button type="button" onClick={() => applyFormat('italic')} className="px-3 py-1 bg-gray-700 rounded-md italic">I</button>
+                            <button type="button" onClick={() => applyFormat('link')} className="px-3 py-1 bg-gray-700 rounded-md underline">Link</button>
+                            <button type="button" onClick={() => applyFormat('list')} className="px-3 py-1 bg-gray-700 rounded-md">Lista</button>
+                        </div>
                         <div className="grid md:grid-cols-2 gap-4">
-                            <textarea name="content" value={formState.content} onChange={handleFormChange} rows="15" className="w-full p-3 border border-gray-700 bg-gray-800 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 font-mono text-sm"></textarea>
+                            <textarea ref={contentRef} name="content" value={formState.content} onChange={handleFormChange} rows="15" className="w-full p-3 border border-gray-700 bg-gray-800 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 font-mono text-sm"></textarea>
                             <div className="bg-black p-3 rounded-md border border-gray-700">
                                 <h4 className="text-lg font-bold text-green-400 mb-2">Pré-visualização</h4>
                                 <div className="prose prose-sm prose-invert max-w-none font-serif text-gray-300 whitespace-pre-line">{formState.content}</div>
@@ -903,7 +950,7 @@ export default function App() {
     const [isLoading, setIsLoading] = useState(true);
 
     const fetchAllData = async () => {
-        const articlesPromise = supabase.from('articles').select('*').order('createdAt', { ascending: false });
+        const articlesPromise = supabase.from('articles').select('*, profiles(full_name)').order('createdAt', { ascending: false });
         const glossaryPromise = supabase.from('glossary').select('*').order('term', { ascending: true });
         const teamPromise = supabase.from('team_members').select('*').order('display_order', { ascending: true });
         const bannerPromise = supabase.from('site_settings').select('value').eq('key', 'main_banner_url').single();
