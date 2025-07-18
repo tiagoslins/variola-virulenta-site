@@ -636,7 +636,7 @@ const ArticleManager = ({ user }) => {
             setFormState({
                 title: editingArticle.title,
                 content: editingArticle.content,
-                tags: editingArticle.tags.join(', '),
+                tags: Array.isArray(editingArticle.tags) ? editingArticle.tags.join(', ') : '',
                 coverImage: editingArticle.coverImage || '',
                 author_name: editingArticle.author_name || ''
             });
