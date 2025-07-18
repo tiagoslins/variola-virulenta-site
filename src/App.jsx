@@ -950,7 +950,7 @@ export default function App() {
     const [isLoading, setIsLoading] = useState(true);
 
     const fetchAllData = async () => {
-        const articlesPromise = supabase.from('articles').select('*, profiles(full_name)').order('createdAt', { ascending: false });
+        const articlesPromise = supabase.from('articles').select('*').order('createdAt', { ascending: false });
         const glossaryPromise = supabase.from('glossary').select('*').order('term', { ascending: true });
         const teamPromise = supabase.from('team_members').select('*').order('display_order', { ascending: true });
         const bannerPromise = supabase.from('site_settings').select('value').eq('key', 'main_banner_url').single();
