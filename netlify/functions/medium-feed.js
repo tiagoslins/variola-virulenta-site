@@ -1,4 +1,4 @@
-//const RSS_TO_JSON_API = 'https://api.rss2json.com/v1/api.json?rss_url=';
+const RSS_TO_JSON_API = 'https://api.rss2json.com/v1/api.json?rss_url=';
 
 // IMPORTANTE: Adicione aqui as URLs dos seus feeds RSS do Medium
 const MEDIUM_RSS_URLS = [
@@ -20,7 +20,7 @@ export const handler = async () => {
       if (result.status === 'ok') {
         allItems = [...allItems, ...result.items];
       } else {
-        console.warn(`Feed inválido ou não encontrado: ${result.feed.url}`);
+        console.warn(`Feed inválido ou não encontrado: ${result.feed?.url || 'URL desconhecida'}`);
       }
     }
 
