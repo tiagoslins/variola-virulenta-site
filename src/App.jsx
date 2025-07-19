@@ -269,6 +269,7 @@ const EpisodesPage = () => {
     const [episodes, setEpisodes] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [selectedEpisodeId, setSelectedEpisodeId] = useState(null);
 
     useEffect(() => {
         const fetchEpisodes = async () => {
@@ -280,6 +281,9 @@ const EpisodesPage = () => {
                 if (!response.ok) throw new Error('A resposta da rede não foi OK.');
                 
                 setEpisodes(data);
+                if (data.length > 0) {
+                    setSelectedEpisodeId(data[0].id); // Abre o primeiro episódio por defeito
+                }
             } catch (err) {
                 setError(`Não foi possível carregar os episódios. Verifique se o ID do Podcast está correto no ficheiro da função e se as variáveis de ambiente no Netlify estão configuradas. Detalhes: ${err.message}`);
             } finally {
@@ -333,19 +337,32 @@ const EpisodesPage = () => {
                 <h2 className="text-2xl font-extrabold text-white mb-6 border-b-2 border-gray-800 pb-2">Anteriores</h2>
                 <div className="space-y-4 max-w-4xl mx-auto">
                     {episodeList.map(ep => (
-                        <a 
-                            key={ep.id} 
-                            href={ep.external_urls.spotify} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="bg-gray-900 p-4 rounded-lg border border-gray-800 flex items-center gap-4 hover:border-green-500 transition-colors"
-                        >
-                            <img src={ep.images[2]?.url || ep.images[0]?.url} alt={ep.name} className="w-16 h-16 rounded-md flex-shrink-0" />
-                            <div>
-                                <h4 className="font-bold text-white">{ep.name}</h4>
-                                <p className="text-sm text-gray-500">{new Date(ep.release_date).toLocaleDateString('pt-BR')}</p>
+                        <div key={ep.id} className="bg-gray-900 p-4 rounded-lg border border-gray-800">
+                            <div 
+                                className="flex items-center gap-4 cursor-pointer"
+                                onClick={() => setSelectedEpisodeId(selectedEpisodeId === ep.id ? null : ep.id)}
+                            >
+                                <img src={ep.images[2]?.url || ep.images[0]?.url} alt={ep.name} className="w-16 h-16 rounded-md flex-shrink-0" />
+                                <div>
+                                    <h4 className="font-bold text-white">{ep.name}</h4>
+                                    <p className="text-sm text-gray-500">{new Date(ep.release_date).toLocaleDateString('pt-BR')}</p>
+                                </div>
                             </div>
-                        </a>
+                            {selectedEpisodeId === ep.id && (
+                                <div className="mt-4">
+                                    <iframe
+                                        style={{ borderRadius: '12px' }}
+                                        src={`https://open.spotify.com/embed/episode/${ep.id}?utm_source=generator&theme=0`}
+                                        width="100%"
+                                        height="152"
+                                        frameBorder="0"
+                                        allowFullScreen=""
+                                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                                        loading="lazy"
+                                    ></iframe>
+                                </div>
+                            )}
+                        </div>
                     ))}
                 </div>
             </div>
@@ -519,10 +536,8 @@ const TeamManager = ({ teamMembers, fetchTeamMembers }) => {
 export default function App() {
     const [page, setPage] = useState({ name: 'home', data: null });
     const [userProfile, setUserProfile] = useState(null);
-    const [articles, setArticles] = useState([]);
     const [glossaryTerms, setGlossaryTerms] = useState([]);
     const [teamMembers, setTeamMembers] = useState([]);
-    const [bannerUrl, setBannerUrl] = useState('');
     const [currentTrack, setCurrentTrack] = useState(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -614,17 +629,17 @@ export default function App() {
         }
         
         switch (page.name) {
-            case 'home': return <HomePage articles={articles} bannerUrl={bannerUrl} />;
-            case 'articles': return <ArticlesPage articles={articles} />;
+            case 'home': return <HomePage />;
+            case 'articles': return <ArticlesPage />;
             case 'episodes': return <EpisodesPage onPlay={handlePlay} />;
             case 'glossary': return <GlossaryPage glossaryTerms={glossaryTerms} />;
             case 'team': return <TeamPage teamMembers={teamMembers} />;
             case 'bio': return <BioPage memberId={page.data} />;
-            case 'tag': return <TagPage tag={page.data} articles={articles} />;
-            case 'search': return <SearchPage query={page.data} articles={articles} />;
+            case 'tag': return <TagPage tag={page.data} />;
+            case 'search': return <SearchPage query={page.data} />;
             case 'login': return <LoginPage />;
             case 'dashboard': return userProfile ? <DashboardPage user={userProfile} glossaryTerms={glossaryTerms} fetchGlossary={fetchAllData} teamMembers={teamMembers} fetchTeamMembers={fetchAllData} /> : <LoginPage />;
-            default: return <HomePage articles={articles} bannerUrl={bannerUrl} />;
+            default: return <HomePage />;
         }
     };
 
