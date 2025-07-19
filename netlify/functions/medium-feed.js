@@ -3,7 +3,7 @@ const RSS_TO_JSON_API = 'https://api.rss2json.com/v1/api.json?rss_url=';
 // IMPORTANTE: Adicione aqui as URLs dos seus feeds RSS do Medium
 const MEDIUM_RSS_URLS = [
   'https://medium.com/feed/@linstiago',
-  'https://medium.com/feed/nome-da-publicacao-2',
+  'https://medium.com/feed/@variolavirulenta',
   // Adicione mais URLs aqui, se necessário
 ]; 
 
