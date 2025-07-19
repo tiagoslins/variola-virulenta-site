@@ -123,7 +123,7 @@ const HomePage = () => {
                 if (Array.isArray(articlesResult)) {
                     setArticles(articlesResult);
                 } else {
-                    console.error("Erro ao buscar artigos do Medium:", articlesResult.error || "Formato inesperado");
+                    throw new Error(articlesResult.error || "Formato de artigos inesperado do Medium.");
                 }
 
                 if (Array.isArray(spotifyResult) && spotifyResult.length > 0) {
@@ -174,7 +174,6 @@ const HomePage = () => {
             </section>
             
             <div className="container mx-auto px-6 py-8 grid lg:grid-cols-2 gap-12">
-                {/* Latest Episode */}
                 {latestEpisode && (
                     <div className="bg-gray-900 p-8 rounded-lg border border-gray-800">
                         <h2 className="text-green-500 font-bold uppercase mb-4">Último Episódio</h2>
@@ -194,7 +193,6 @@ const HomePage = () => {
                     </div>
                 )}
 
-                {/* Latest Article */}
                 {featuredArticle && (
                     <div className="bg-gray-900 p-8 rounded-lg border border-gray-800 cursor-pointer group" onClick={() => window.open(featuredArticle.link, '_blank')}>
                         <h2 className="text-green-500 font-bold uppercase mb-4">Último Artigo</h2>
