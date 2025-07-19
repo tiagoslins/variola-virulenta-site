@@ -132,7 +132,7 @@ const HomePage = () => {
                      console.error("Erro ao buscar episódios do Spotify:", spotifyResult.error || "Formato inesperado");
                 }
                 
-                if (bannerResult.error) console.error('Erro ao buscar banner:', bannerResult.error); else setBannerUrl(bannerResult.data?.value || '/images/variola_banner.jpg.jpg');
+                if (bannerResult.error) console.error('Erro ao buscar banner:', bannerResult.error); else setBannerUrl(bannerResult.data?.value || '/images/variola_banner.jpg');
 
             } catch (err) {
                 console.error("Falha ao carregar dados da página inicial:", err);
