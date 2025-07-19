@@ -101,10 +101,59 @@ const PersistentAudioPlayer = ({ track, isPlaying, onPlayPause, onEnded }) => {
 
 // --- PÁGINAS ---
 
-const HomePage = ({ articles, bannerUrl }) => {
+const HomePage = () => {
+    const [articles, setArticles] = useState([]);
+    const [latestEpisode, setLatestEpisode] = useState(null);
+    const [bannerUrl, setBannerUrl] = useState('');
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchHomePageData = async () => {
+            setIsLoading(true);
+            setError(null);
+            
+            try {
+                const articlesPromise = fetch('/.netlify/functions/medium-feed').then(res => res.json());
+                const spotifyPromise = fetch('/.netlify/functions/spotify').then(res => res.json());
+                const bannerPromise = supabase.from('site_settings').select('value').eq('key', 'main_banner_url').single();
+
+                const [articlesResult, spotifyResult, bannerResult] = await Promise.all([articlesPromise, spotifyPromise, bannerPromise]);
+                
+                if (Array.isArray(articlesResult)) {
+                    setArticles(articlesResult);
+                } else {
+                    throw new Error(articlesResult.error || "Formato de artigos inesperado do Medium.");
+                }
+
+                if (Array.isArray(spotifyResult) && spotifyResult.length > 0) {
+                    setLatestEpisode(spotifyResult[0]);
+                } else {
+                     console.error("Erro ao buscar episódios do Spotify:", spotifyResult.error || "Formato inesperado");
+                }
+                
+                if (bannerResult.error) console.error('Erro ao buscar banner:', bannerResult.error); else setBannerUrl(bannerResult.data?.value || '/images/variola_banner.jpg.jpg');
+
+            } catch (err) {
+                console.error("Falha ao carregar dados da página inicial:", err);
+                setError(`Não foi possível carregar o conteúdo. Verifique as configurações das funções do Netlify. Detalhes: ${err.message}`);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchHomePageData();
+    }, []);
+
+    if (isLoading) {
+        return <div className="text-center py-10 text-white">Carregando...</div>;
+    }
+
+    if (error) {
+        return <div className="container mx-auto px-6 py-10 text-center text-red-400 bg-red-900/50 rounded-lg">{error}</div>;
+    }
+    
     const featuredArticle = articles[0];
-    const secondaryArticles = articles.slice(1, 3);
-    const moreArticles = articles.slice(3);
+    const moreArticles = articles.slice(1, 5);
 
     return (
         <>
@@ -124,40 +173,71 @@ const HomePage = ({ articles, bannerUrl }) => {
                 </div>
             </section>
             
-            {(!articles || articles.length === 0) ? (
-                <div className="text-center py-10 text-white">Nenhum artigo publicado ainda.</div>
-            ) : (
-                <div className="container mx-auto px-6 py-8">
-                    <div className="grid lg:grid-cols-3 gap-8">
-                        {featuredArticle && (
-                            <div className="lg:col-span-2">
-                                <div className="cursor-pointer group" onClick={() => window.open(featuredArticle.link, '_blank')}>
-                                    {featuredArticle.coverImage && <img src={featuredArticle.coverImage} alt="" className="w-full h-auto object-cover mb-4"/>}
-                                    <p className="text-green-500 font-bold text-sm uppercase">{featuredArticle.categories?.[0]}</p>
-                                    <h1 className="text-3xl md:text-5xl font-extrabold text-white my-2 group-hover:text-green-400 transition-colors">{featuredArticle.title}</h1>
-                                    <p className="text-gray-500 text-sm mt-2">Por {featuredArticle.author}</p>
-                                </div>
-                            </div>
-                        )}
-                        <div className="space-y-8">
-                            {secondaryArticles.map(article => (
-                                 <div key={article.guid} className="cursor-pointer group" onClick={() => window.open(article.link, '_blank')}>
-                                     {article.coverImage && <img src={article.coverImage} alt="" className="w-full h-40 object-cover mb-2"/>}
-                                     <p className="text-green-500 font-bold text-sm uppercase">{article.categories?.[0]}</p>
-                                     <h2 className="text-xl font-bold text-white group-hover:text-green-400 transition-colors">{article.title}</h2>
-                                     <p className="text-gray-500 text-sm mt-1">Por {article.author}</p>
-                                 </div>
-                            ))}
+            <div className="container mx-auto px-6 py-8 grid lg:grid-cols-2 gap-12">
+                {latestEpisode && (
+                    <div className="bg-gray-900 p-8 rounded-lg border border-gray-800">
+                        <h2 className="text-green-500 font-bold uppercase mb-4">Último Episódio</h2>
+                        <div className="flex flex-col gap-4">
+                            <h3 className="text-3xl font-bold text-white">{latestEpisode.name}</h3>
+                            <iframe
+                                style={{ borderRadius: '12px' }}
+                                src={`https://open.spotify.com/embed/episode/${latestEpisode.id}?utm_source=generator&theme=0`}
+                                width="100%"
+                                height="152"
+                                frameBorder="0"
+                                allowFullScreen=""
+                                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                                loading="lazy"
+                            ></iframe>
                         </div>
                     </div>
-                    <ArticlesSection title="Mais Artigos" articles={moreArticles} />
-                </div>
-            )}
+                )}
+
+                {featuredArticle && (
+                    <div className="bg-gray-900 p-8 rounded-lg border border-gray-800 cursor-pointer group" onClick={() => window.open(featuredArticle.link, '_blank')}>
+                        <h2 className="text-green-500 font-bold uppercase mb-4">Último Artigo</h2>
+                        {featuredArticle.coverImage && <img src={featuredArticle.coverImage} alt="" className="w-full h-48 object-cover mb-4"/>}
+                        <h3 className="text-3xl font-bold text-white my-2 group-hover:text-green-400 transition-colors">{featuredArticle.title}</h3>
+                        <p className="text-gray-500 text-sm mt-2">Por {featuredArticle.author}</p>
+                    </div>
+                )}
+            </div>
+
+            <ArticlesSection title="Mais Artigos" articles={moreArticles} />
         </>
     );
 };
 
-const ArticlesPage = ({ articles }) => {
+const ArticlesPage = () => {
+    const [articles, setArticles] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchAllArticles = async () => {
+            setIsLoading(true);
+            try {
+                const response = await fetch('/.netlify/functions/medium-feed');
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                setArticles(data);
+            } catch (err) {
+                setError(`Não foi possível carregar os artigos. Verifique a sua URL do feed RSS no ficheiro da função 'medium-feed.js'. Detalhes: ${err.message}`);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchAllArticles();
+    }, []);
+
+    if (isLoading) {
+        return <div className="text-center py-10 text-white">Carregando artigos...</div>;
+    }
+
+    if (error) {
+        return <div className="container mx-auto px-6 py-20 text-center text-red-400 bg-red-900/50 rounded-lg">{error}</div>;
+    }
+    
     return <ArticlesSection title="Todos os Artigos" articles={articles} />;
 };
 
@@ -185,7 +265,7 @@ const ArticleCard = ({ article }) => (
     </div>
 );
 
-const EpisodesPage = ({ onPlay }) => {
+const EpisodesPage = () => {
     const [episodes, setEpisodes] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -260,7 +340,7 @@ const EpisodesPage = ({ onPlay }) => {
                         <div key={ep.id} className="bg-gray-900 p-4 rounded-lg border border-gray-800">
                             <div 
                                 className="flex items-center gap-4 cursor-pointer"
-                                onClick={() => onPlay({ title: ep.name, audioSrc: ep.audio_preview_url })}
+                                onClick={() => setSelectedEpisodeId(selectedEpisodeId === ep.id ? null : ep.id)}
                             >
                                 <img src={ep.images[2]?.url || ep.images[0]?.url} alt={ep.name} className="w-16 h-16 rounded-md flex-shrink-0" />
                                 <div>
@@ -268,6 +348,20 @@ const EpisodesPage = ({ onPlay }) => {
                                     <p className="text-sm text-gray-500">{new Date(ep.release_date).toLocaleDateString('pt-BR')}</p>
                                 </div>
                             </div>
+                            {selectedEpisodeId === ep.id && (
+                                <div className="mt-4">
+                                    <iframe
+                                        style={{ borderRadius: '12px' }}
+                                        src={`https://open.spotify.com/embed/episode/${ep.id}?utm_source=generator&theme=0`}
+                                        width="100%"
+                                        height="152"
+                                        frameBorder="0"
+                                        allowFullScreen=""
+                                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                                        loading="lazy"
+                                    ></iframe>
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>
